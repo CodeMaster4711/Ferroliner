@@ -136,7 +136,7 @@
           >
             <option value="">No assignee</option>
             {#each members as m}
-              <option value={m.user_id}>{m.user_id}</option>
+              <option value={m.user_id}>{m.username}</option>
             {/each}
           </select>
         {/if}

@@ -15,6 +15,13 @@
     {issue.title}
   </p>
 
+  <!-- Description preview -->
+  {#if issue.description}
+    <p class="text-[11px] leading-relaxed text-muted-foreground/70 line-clamp-2 mb-2 -mt-1">
+      {issue.description.replace(/[#*`\[\]>_~]/g, '').trim()}
+    </p>
+  {/if}
+
   <!-- Labels -->
   {#if issue.labels.length > 0}
     <div class="mb-2 flex flex-wrap gap-1">

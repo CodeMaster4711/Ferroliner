@@ -14,7 +14,14 @@
 
   <span class="w-20 flex-shrink-0 text-xs text-muted-foreground">{issue.identifier}</span>
 
-  <span class="flex-1 truncate text-sm text-foreground">{issue.title}</span>
+  <span class="flex-1 min-w-0">
+    <span class="block truncate text-sm text-foreground">{issue.title}</span>
+    {#if issue.description}
+      <span class="block truncate text-xs text-muted-foreground/60">
+        {issue.description.replace(/[#*`\[\]>_~]/g, '').trim()}
+      </span>
+    {/if}
+  </span>
 
   <IssueStatusBadge status={issue.status} />
 

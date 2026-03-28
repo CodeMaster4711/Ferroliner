@@ -1,6 +1,7 @@
 <script lang="ts">
   import type { Issue, IssueStatus } from '$lib/types';
   import KanbanCard from './KanbanCard.svelte';
+  import IssueStatusBadge from './IssueStatusBadge.svelte';
   import { IssuesService } from '$lib/services/issues';
   import { issueStore } from '$lib/stores/issues';
 
@@ -84,12 +85,8 @@
     >
       <!-- Column header -->
       <div class="flex items-center gap-2 px-3 py-3">
-        <span class="relative flex h-3.5 w-3.5 flex-shrink-0 items-center justify-center">
-          <span class="absolute h-2 w-2 rounded-full opacity-30" style="background-color: {column.status.color}"></span>
-          <span class="h-1.5 w-1.5 rounded-full" style="background-color: {column.status.color}"></span>
-        </span>
-        <span class="text-xs font-medium text-foreground">{column.status.name}</span>
-        <span class="ml-1 text-xs text-muted-foreground">{column.issues.length}</span>
+        <IssueStatusBadge status={column.status} />
+        <span class="ml-auto text-xs text-muted-foreground">{column.issues.length}</span>
       </div>
 
       <!-- Cards -->
