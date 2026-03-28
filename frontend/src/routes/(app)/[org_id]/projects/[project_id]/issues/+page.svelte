@@ -9,8 +9,6 @@
   import NewIssueModal from '$lib/components/issue-board/NewIssueModal.svelte';
   import DisplayPopover from '$lib/components/issue-board/DisplayPopover.svelte';
   import type { IssueStatus, Label, Member } from '$lib/types';
-  import { onMount } from 'svelte';
-
   const orgId = $derived($page.params.org_id ?? '');
   const projectId = $derived($page.params.project_id ?? '');
 
@@ -24,23 +22,31 @@
   let showEmptyColumns = $state(true);
   let search = $state('');
 
-  onMount(async () => {
+  $effect(() => {
+    const currentOrgId = orgId;
+    const currentProjectId = projectId;
+    if (!currentOrgId || !currentProjectId) return;
+
     issueStore.setLoading(true);
-    try {
-      const [issues, s, l, m] = await Promise.all([
-        IssuesService.list(orgId, projectId),
-        ProjectsService.listStatuses(orgId, projectId),
-        ProjectsService.listLabels(orgId, projectId),
-        ProjectsService.listMembers(orgId, projectId),
-      ]);
+    statuses = [];
+    labels = [];
+    members = [];
+    search = '';
+
+    Promise.all([
+      IssuesService.list(currentOrgId, currentProjectId),
+      ProjectsService.listStatuses(currentOrgId, currentProjectId),
+      ProjectsService.listLabels(currentOrgId, currentProjectId),
+      ProjectsService.listMembers(currentOrgId, currentProjectId),
+    ]).then(([issues, s, l, m]) => {
       issueStore.setIssues(issues);
       issueStore.setStatuses(s);
       statuses = s;
       labels = l;
       members = m;
-    } catch {
+    }).catch(() => {
       issueStore.setLoading(false);
-    }
+    });
   });
 
   const store = $derived($issueStore);
