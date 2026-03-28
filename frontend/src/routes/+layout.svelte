@@ -4,23 +4,33 @@
   import { goto } from '$app/navigation';
   import { page } from '$app/stores';
   import { onMount } from 'svelte';
+  import { browser } from '$app/environment';
 
   let { data, children } = $props();
 
   const PUBLIC_ROUTES = ['/signin', '/otp', '/change-password'];
 
+  // Init synchronously on the client so child onMount calls have the token
+  if (browser) {
+    authStore.init(data.user ?? null, data.token ?? null);
+  }
+
   $effect(() => {
-    const user = data.user ?? null;
-    const token = data.token ?? null;
-    authStore.init(user, token);
+    // Re-init reactively when data changes (navigation, login, logout)
+    authStore.init(data.user ?? null, data.token ?? null);
+  });
+
+  $effect(() => {
+    if (!browser) return;
+    const state = $authStore;
+    if (state.isLoading) return;
 
     const currentPath = $page.url.pathname;
-    const isPublicRoute = PUBLIC_ROUTES.some((route) => currentPath.startsWith(route));
-    const isAuthenticated = !!user && !!token;
+    const isPublicRoute = PUBLIC_ROUTES.some((r) => currentPath.startsWith(r));
 
-    if (!isAuthenticated && !isPublicRoute) {
+    if (!state.isAuthenticated && !isPublicRoute) {
       goto('/signin');
-    } else if (isAuthenticated && user?.force_password_change && currentPath !== '/change-password') {
+    } else if (state.isAuthenticated && state.user?.force_password_change && currentPath !== '/change-password') {
       goto('/change-password');
     }
   });
