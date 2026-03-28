@@ -69,7 +69,8 @@ constant_time_eq = "0.3"
 object_store = { version = "0.11", features = ["aws"] }
 
 # Streaming
-tokio-stream = "0.1"
+tokio-stream = { version = "0.1", features = ["sync"] }
+futures-util = "0.3"
 
 # Logging
 tracing = "0.1"

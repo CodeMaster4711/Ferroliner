@@ -4,8 +4,8 @@
   import type { IssueStatus, Label, Member } from '$lib/types';
   import { onMount } from 'svelte';
 
-  const orgId = $derived($page.params.org_id);
-  const projectId = $derived($page.params.project_id);
+  const orgId = $derived($page.params.org_id ?? '');
+  const projectId = $derived($page.params.project_id ?? '');
 
   let statuses = $state<IssueStatus[]>([]);
   let labels = $state<Label[]>([]);

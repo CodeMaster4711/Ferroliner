@@ -10,6 +10,7 @@ use tower_http::trace::TraceLayer;
 use tracing::{info_span, Span};
 
 pub mod issues;
+pub mod notifications;
 pub mod organizations;
 pub mod projects;
 pub mod users;
@@ -65,7 +66,8 @@ pub fn create_router() -> Router<AppState> {
         .merge(users::users_routes())
         .merge(organizations::routes())
         .merge(projects::routes())
-        .merge(issues::routes());
+        .merge(issues::routes())
+        .merge(notifications::routes());
 
     Router::new()
         .nest("/api", api_router)

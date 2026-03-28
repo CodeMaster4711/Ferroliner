@@ -6,8 +6,8 @@
 
   let { children } = $props();
 
-  const orgId = $derived($page.params.org_id);
-  const projectId = $derived($page.params.project_id);
+  const orgId = $derived($page.params.org_id ?? '');
+  const projectId = $derived($page.params.project_id ?? '');
 
   onMount(async () => {
     if (!$projectStore.currentProject || $projectStore.currentProject.id !== projectId) {

@@ -9,7 +9,7 @@
   import type { Issue, IssueStatus } from '$lib/types';
   import { onMount } from 'svelte';
 
-  const orgId = $derived($page.params.org_id);
+  const orgId = $derived($page.params.org_id ?? '');
 
   interface ProjectIssues {
     projectId: string;

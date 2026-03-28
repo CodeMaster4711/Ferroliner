@@ -4,7 +4,7 @@
   import { projectStore } from '$lib/stores/projects';
   import { ProjectsService } from '$lib/services/projects';
 
-  const orgId = $derived($page.params.org_id);
+  const orgId = $derived($page.params.org_id ?? '');
 
   let showCreate = $state(false);
   let name = $state('');

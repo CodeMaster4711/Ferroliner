@@ -1,12 +1,18 @@
 pub mod entities;
 
+pub use entities::attachment;
+pub use entities::comment;
+pub use entities::comment_reaction;
 pub use entities::invalid_jwt;
 pub use entities::issue;
+pub use entities::issue_activity;
 pub use entities::issue_label;
 pub use entities::issue_relationship;
 pub use entities::issue_status;
+pub use entities::issue_subscription;
 pub use entities::key;
 pub use entities::label;
+pub use entities::notification;
 pub use entities::organization;
 pub use entities::permission;
 pub use entities::project;
@@ -17,13 +23,19 @@ pub use entities::role_permission;
 pub use entities::user;
 pub use entities::user_organization;
 
+pub use entities::attachment::Entity as Attachment;
+pub use entities::comment::Entity as Comment;
+pub use entities::comment_reaction::Entity as CommentReaction;
 pub use entities::invalid_jwt::Entity as InvalidJwt;
 pub use entities::issue::Entity as Issue;
+pub use entities::issue_activity::Entity as IssueActivity;
 pub use entities::issue_label::Entity as IssueLabel;
 pub use entities::issue_relationship::Entity as IssueRelationship;
 pub use entities::issue_status::Entity as IssueStatus;
+pub use entities::issue_subscription::Entity as IssueSubscription;
 pub use entities::key::Entity as Key;
 pub use entities::label::Entity as Label;
+pub use entities::notification::Entity as Notification;
 pub use entities::organization::Entity as Organization;
 pub use entities::permission::Entity as Permission;
 pub use entities::project::Entity as Project;

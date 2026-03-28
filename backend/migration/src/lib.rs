@@ -8,6 +8,8 @@ mod m20240101_000005_add_rbac_tables;
 mod m20250001_000006_create_projects;
 mod m20250001_000007_create_issue_workflow;
 mod m20250001_000008_create_issues;
+mod m20250001_000009_create_comments_and_activity;
+mod m20250001_000011_create_notifications;
 
 pub struct Migrator;
 
@@ -23,6 +25,8 @@ impl MigratorTrait for Migrator {
             Box::new(m20250001_000006_create_projects::Migration),
             Box::new(m20250001_000007_create_issue_workflow::Migration),
             Box::new(m20250001_000008_create_issues::Migration),
+            Box::new(m20250001_000009_create_comments_and_activity::Migration),
+            Box::new(m20250001_000011_create_notifications::Migration),
         ]
     }
 }

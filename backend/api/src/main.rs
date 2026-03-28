@@ -6,11 +6,14 @@ use std::net::SocketAddr;
 use std::sync::Arc;
 use tokio::sync::broadcast;
 
+mod attachment_service;
 mod auth;
 mod auth_service;
+mod comment_service;
 mod db;
 mod init;
 mod issue_service;
+mod notification_service;
 mod project_service;
 mod rbac_service;
 mod routes;

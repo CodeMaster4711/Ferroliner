@@ -7,7 +7,9 @@ use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
 use crate::{
+    attachment_service,
     auth::middleware::AuthenticatedUser,
+    comment_service,
     issue_service::{IssueError, IssueFilter, IssuePatch, IssueService, IssueWithRelations},
     AppState,
 };
@@ -31,6 +33,30 @@ pub fn routes() -> Router<AppState> {
         .route(
             "/organizations/{org_id}/projects/{project_id}/issues/{issue_id}/relationships/{rel_id}",
             axum::routing::delete(remove_relationship),
+        )
+        .route(
+            "/organizations/{org_id}/projects/{project_id}/issues/{issue_id}/comments",
+            axum::routing::get(list_comments).post(create_comment),
+        )
+        .route(
+            "/organizations/{org_id}/projects/{project_id}/issues/{issue_id}/comments/{comment_id}",
+            axum::routing::put(update_comment).delete(delete_comment),
+        )
+        .route(
+            "/organizations/{org_id}/projects/{project_id}/issues/{issue_id}/comments/{comment_id}/reactions/{emoji}",
+            axum::routing::post(add_reaction).delete(remove_reaction),
+        )
+        .route(
+            "/organizations/{org_id}/projects/{project_id}/issues/{issue_id}/activity",
+            axum::routing::get(list_activity),
+        )
+        .route(
+            "/organizations/{org_id}/projects/{project_id}/issues/{issue_id}/attachments",
+            axum::routing::get(list_attachments).post(initiate_upload),
+        )
+        .route(
+            "/organizations/{org_id}/projects/{project_id}/issues/{issue_id}/attachments/{attachment_id}",
+            axum::routing::delete(delete_attachment),
         )
 }
 
@@ -319,4 +345,147 @@ async fn remove_relationship(
     let svc = IssueService::new(state.db_conn.clone());
     svc.remove_relationship(rel_id).await.map_err(issue_err)?;
     Ok(StatusCode::NO_CONTENT)
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct CommentBody {
+    pub body: String,
+}
+
+async fn list_comments(
+    AuthenticatedUser(_claims): AuthenticatedUser,
+    State(state): State<AppState>,
+    Path((_org_id, _project_id, issue_id)): Path<(Uuid, Uuid, Uuid)>,
+) -> Result<Json<Vec<entity::comment::Model>>, StatusCode> {
+    comment_service::list(&state.db_conn, issue_id)
+        .await
+        .map(Json)
+        .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)
+}
+
+async fn create_comment(
+    AuthenticatedUser(claims): AuthenticatedUser,
+    State(state): State<AppState>,
+    Path((_org_id, _project_id, issue_id)): Path<(Uuid, Uuid, Uuid)>,
+    Json(req): Json<CommentBody>,
+) -> Result<Json<entity::comment::Model>, StatusCode> {
+    comment_service::create(&state.db_conn, issue_id, claims.user_id, req.body)
+        .await
+        .map(Json)
+        .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)
+}
+
+async fn update_comment(
+    AuthenticatedUser(claims): AuthenticatedUser,
+    State(state): State<AppState>,
+    Path((_org_id, _project_id, _issue_id, comment_id)): Path<(Uuid, Uuid, Uuid, Uuid)>,
+    Json(req): Json<CommentBody>,
+) -> Result<Json<entity::comment::Model>, StatusCode> {
+    comment_service::update(&state.db_conn, comment_id, claims.user_id, req.body)
+        .await
+        .map(Json)
+        .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)
+}
+
+async fn delete_comment(
+    AuthenticatedUser(claims): AuthenticatedUser,
+    State(state): State<AppState>,
+    Path((_org_id, _project_id, _issue_id, comment_id)): Path<(Uuid, Uuid, Uuid, Uuid)>,
+) -> StatusCode {
+    match comment_service::delete(&state.db_conn, comment_id, claims.user_id).await {
+        Ok(_) => StatusCode::NO_CONTENT,
+        Err(_) => StatusCode::INTERNAL_SERVER_ERROR,
+    }
+}
+
+async fn add_reaction(
+    AuthenticatedUser(claims): AuthenticatedUser,
+    State(state): State<AppState>,
+    Path((_org_id, _project_id, _issue_id, comment_id, emoji)): Path<(Uuid, Uuid, Uuid, Uuid, String)>,
+) -> StatusCode {
+    match comment_service::add_reaction(&state.db_conn, comment_id, claims.user_id, emoji).await {
+        Ok(_) => StatusCode::NO_CONTENT,
+        Err(_) => StatusCode::INTERNAL_SERVER_ERROR,
+    }
+}
+
+async fn remove_reaction(
+    AuthenticatedUser(claims): AuthenticatedUser,
+    State(state): State<AppState>,
+    Path((_org_id, _project_id, _issue_id, comment_id, emoji)): Path<(Uuid, Uuid, Uuid, Uuid, String)>,
+) -> StatusCode {
+    match comment_service::remove_reaction(&state.db_conn, comment_id, claims.user_id, emoji).await {
+        Ok(_) => StatusCode::NO_CONTENT,
+        Err(_) => StatusCode::INTERNAL_SERVER_ERROR,
+    }
+}
+
+async fn list_activity(
+    AuthenticatedUser(_claims): AuthenticatedUser,
+    State(state): State<AppState>,
+    Path((_org_id, _project_id, issue_id)): Path<(Uuid, Uuid, Uuid)>,
+) -> Result<Json<Vec<entity::issue_activity::Model>>, StatusCode> {
+    comment_service::list_activity(&state.db_conn, issue_id)
+        .await
+        .map(Json)
+        .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)
+}
+
+#[derive(Debug, Deserialize)]
+pub struct InitiateUploadRequest {
+    pub filename: String,
+    pub mime_type: String,
+    pub size_bytes: i64,
+}
+
+#[derive(Debug, Serialize)]
+pub struct InitiateUploadResponse {
+    pub attachment_id: Uuid,
+    pub storage_key: String,
+}
+
+async fn list_attachments(
+    AuthenticatedUser(_claims): AuthenticatedUser,
+    State(state): State<AppState>,
+    Path((_org_id, _project_id, issue_id)): Path<(Uuid, Uuid, Uuid)>,
+) -> Result<Json<Vec<entity::attachment::Model>>, StatusCode> {
+    attachment_service::list(&state.db_conn, issue_id)
+        .await
+        .map(Json)
+        .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)
+}
+
+async fn initiate_upload(
+    AuthenticatedUser(claims): AuthenticatedUser,
+    State(state): State<AppState>,
+    Path((_org_id, _project_id, issue_id)): Path<(Uuid, Uuid, Uuid)>,
+    Json(req): Json<InitiateUploadRequest>,
+) -> Result<Json<InitiateUploadResponse>, StatusCode> {
+    attachment_service::initiate_upload(
+        &state.db_conn,
+        issue_id,
+        claims.user_id,
+        req.filename,
+        req.mime_type,
+        req.size_bytes,
+    )
+    .await
+    .map(|r| {
+        Json(InitiateUploadResponse {
+            attachment_id: r.attachment_id,
+            storage_key: r.storage_key,
+        })
+    })
+    .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)
+}
+
+async fn delete_attachment(
+    AuthenticatedUser(_claims): AuthenticatedUser,
+    State(state): State<AppState>,
+    Path((_org_id, _project_id, _issue_id, attachment_id)): Path<(Uuid, Uuid, Uuid, Uuid)>,
+) -> StatusCode {
+    match attachment_service::delete(&state.db_conn, &state.storage, attachment_id).await {
+        Ok(_) => StatusCode::NO_CONTENT,
+        Err(_) => StatusCode::INTERNAL_SERVER_ERROR,
+    }
 }

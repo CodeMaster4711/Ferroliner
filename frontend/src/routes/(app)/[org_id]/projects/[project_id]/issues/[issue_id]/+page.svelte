@@ -8,13 +8,16 @@
   import MarkdownRenderer from '$lib/components/issue-detail/MarkdownRenderer.svelte';
   import IssueStatusBadge from '$lib/components/issue-board/IssueStatusBadge.svelte';
   import IssuePriorityIcon from '$lib/components/issue-board/IssuePriorityIcon.svelte';
+  import CommentList from '$lib/components/issue-detail/CommentList.svelte';
+  import ActivityFeed from '$lib/components/issue-detail/ActivityFeed.svelte';
+  import { authStore } from '$lib/stores/auth';
   import type { IssueStatus } from '$lib/types';
   import { PRIORITY_LABELS } from '$lib/types';
   import { onMount } from 'svelte';
 
-  const orgId = $derived($page.params.org_id);
-  const projectId = $derived($page.params.project_id);
-  const issueId = $derived($page.params.issue_id);
+  const orgId = $derived($page.params.org_id ?? '');
+  const projectId = $derived($page.params.project_id ?? '');
+  const issueId = $derived($page.params.issue_id ?? '');
 
   let statuses = $state<IssueStatus[]>([]);
   let editingTitle = $state(false);
@@ -126,7 +129,7 @@
         </h1>
       {/if}
 
-      <div class="mb-4">
+      <div class="mb-6">
         {#if editingDescription}
           <div class="flex flex-col gap-2">
             <MarkdownEditor
@@ -153,6 +156,18 @@
             {/if}
           </div>
         {/if}
+      </div>
+      <div class="mb-6 border-t border-border pt-6">
+        <CommentList
+          {orgId}
+          {projectId}
+          {issueId}
+          currentUserId={$authStore.user?.id ?? null}
+        />
+      </div>
+
+      <div class="border-t border-border pt-6">
+        <ActivityFeed {orgId} {projectId} {issueId} />
       </div>
     </div>
 

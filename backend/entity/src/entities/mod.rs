@@ -1,10 +1,16 @@
+pub mod attachment;
+pub mod comment;
+pub mod comment_reaction;
 pub mod invalid_jwt;
 pub mod issue;
+pub mod issue_activity;
 pub mod issue_label;
 pub mod issue_relationship;
 pub mod issue_status;
+pub mod issue_subscription;
 pub mod key;
 pub mod label;
+pub mod notification;
 pub mod organization;
 pub mod permission;
 pub mod project;
