@@ -33,6 +33,7 @@ export interface Member {
   id: string;
   project_id: string;
   user_id: string;
+  username: string;
   role: string;
   joined_at: string;
 }

@@ -104,7 +104,7 @@
       <span class="text-sm text-muted-foreground">Loading...</span>
     </div>
   {:else}
-    <div class="flex min-w-0 flex-1 flex-col overflow-y-auto p-6 max-w-3xl">
+    <div class="flex min-w-0 flex-1 flex-col overflow-y-auto p-6">
       <div class="flex items-center gap-2 mb-4">
         <button
           onclick={() => goto(`/${orgId}/projects/${projectId}/issues`)}
@@ -233,7 +233,7 @@
           >
             <option value="">Unassigned</option>
             {#each members as m}
-              <option value={m.user_id}>{m.user_id}</option>
+              <option value={m.user_id}>{m.username}</option>
             {/each}
           </select>
         </div>

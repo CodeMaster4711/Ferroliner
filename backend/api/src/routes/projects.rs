@@ -6,6 +6,9 @@ use axum::{
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
+use entity::User;
+use sea_orm::EntityTrait;
+
 use crate::{
     auth::middleware::AuthenticatedUser,
     project_service::{ProjectError, ProjectService},
@@ -92,6 +95,7 @@ pub struct MemberResponse {
     pub id: Uuid,
     pub project_id: Uuid,
     pub user_id: Uuid,
+    pub username: String,
     pub role: String,
     pub joined_at: String,
 }
@@ -275,18 +279,23 @@ async fn list_members(
 ) -> Result<Json<Vec<MemberResponse>>, StatusCode> {
     let svc = ProjectService::new(state.db_conn.clone());
     let members = svc.list_members(project_id).await.map_err(project_err)?;
-    Ok(Json(
-        members
-            .into_iter()
-            .map(|m| MemberResponse {
-                id: m.id,
-                project_id: m.project_id,
-                user_id: m.user_id,
-                role: m.role,
-                joined_at: m.joined_at.to_string(),
-            })
-            .collect(),
-    ))
+    let mut response = Vec::with_capacity(members.len());
+    for m in members {
+        let user = User::find_by_id(m.user_id)
+            .one(&state.db_conn)
+            .await
+            .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?
+            .ok_or(StatusCode::NOT_FOUND)?;
+        response.push(MemberResponse {
+            id: m.id,
+            project_id: m.project_id,
+            user_id: m.user_id,
+            username: user.name,
+            role: m.role,
+            joined_at: m.joined_at.to_string(),
+        });
+    }
+    Ok(Json(response))
 }
 
 async fn add_member(
@@ -300,10 +309,16 @@ async fn add_member(
         .add_member(project_id, req.user_id, req.role)
         .await
         .map_err(project_err)?;
+    let user = User::find_by_id(m.user_id)
+        .one(&state.db_conn)
+        .await
+        .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?
+        .ok_or(StatusCode::NOT_FOUND)?;
     Ok(Json(MemberResponse {
         id: m.id,
         project_id: m.project_id,
         user_id: m.user_id,
+        username: user.name,
         role: m.role,
         joined_at: m.joined_at.to_string(),
     }))
