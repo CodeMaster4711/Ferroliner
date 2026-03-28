@@ -15,6 +15,7 @@
   import ChevronsUpDownIcon from '@lucide/svelte/icons/chevrons-up-down';
   import LogOutIcon from '@lucide/svelte/icons/log-out';
   import SettingsIcon from '@lucide/svelte/icons/settings';
+  import UsersIcon from '@lucide/svelte/icons/users';
 
   let {
     ref = $bindable(null),
@@ -77,6 +78,19 @@
               <a href="/{orgId}/my-issues" {...props} class="flex items-center gap-2 {props.class ?? ''}">
                 <InboxIcon class="h-3.5 w-3.5 flex-shrink-0" />
                 <span class="text-sm">My Issues</span>
+              </a>
+            {/snippet}
+          </Sidebar.MenuButton>
+        </Sidebar.MenuItem>
+        <Sidebar.MenuItem>
+          <Sidebar.MenuButton
+            isActive={isActive(`/${orgId}/settings`)}
+            tooltipContent="Organization Settings"
+          >
+            {#snippet child({ props })}
+              <a href="/{orgId}/settings" {...props} class="flex items-center gap-2 {props.class ?? ''}">
+                <UsersIcon class="h-3.5 w-3.5 flex-shrink-0" />
+                <span class="text-sm">Members</span>
               </a>
             {/snippet}
           </Sidebar.MenuButton>
@@ -154,7 +168,11 @@
           >
             <DropdownMenu.Item onclick={() => goto('/settings')}>
               <SettingsIcon />
-              Settings
+              Account Settings
+            </DropdownMenu.Item>
+            <DropdownMenu.Item onclick={() => goto(`/${orgId}/settings`)}>
+              <UsersIcon />
+              Organization
             </DropdownMenu.Item>
             <DropdownMenu.Separator />
             <DropdownMenu.Item onclick={logout}>

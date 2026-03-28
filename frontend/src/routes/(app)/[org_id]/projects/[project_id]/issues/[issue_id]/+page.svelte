@@ -20,6 +20,7 @@
   const issueId = $derived($page.params.issue_id ?? '');
 
   let statuses = $state<IssueStatus[]>([]);
+  let members = $state<import('$lib/types').Member[]>([]);
   let editingTitle = $state(false);
   let editingDescription = $state(false);
   let draftTitle = $state('');
@@ -28,12 +29,14 @@
 
   onMount(async () => {
     try {
-      const [issue, fetchedStatuses] = await Promise.all([
+      const [issue, fetchedStatuses, fetchedMembers] = await Promise.all([
         IssuesService.get(orgId, projectId, issueId),
         ProjectsService.listStatuses(orgId, projectId),
+        ProjectsService.listMembers(orgId, projectId),
       ]);
       issueStore.setCurrentIssue(issue);
       statuses = fetchedStatuses;
+      members = fetchedMembers;
       draftTitle = issue.title;
       draftDescription = issue.description ?? '';
     } catch {
@@ -81,6 +84,12 @@
     issueStore.updateIssue(updated);
   }
 
+  async function setAssignee(userId: string | null) {
+    if (!issue) return;
+    const updated = await IssuesService.update(orgId, projectId, issue.id, { assignee_id: userId });
+    issueStore.updateIssue(updated);
+  }
+
   async function deleteIssue() {
     if (!issue) return;
     await IssuesService.delete(orgId, projectId, issue.id);
@@ -89,13 +98,13 @@
   }
 </script>
 
-<div class="flex h-full overflow-hidden">
+<div class="flex min-h-0 flex-1 overflow-hidden">
   {#if !issue}
     <div class="flex flex-1 items-center justify-center">
       <span class="text-sm text-muted-foreground">Loading...</span>
     </div>
   {:else}
-    <div class="flex flex-1 flex-col overflow-y-auto p-6">
+    <div class="flex min-w-0 flex-1 flex-col overflow-y-auto p-6 max-w-3xl">
       <div class="flex items-center gap-2 mb-4">
         <button
           onclick={() => goto(`/${orgId}/projects/${projectId}/issues`)}
@@ -211,6 +220,22 @@
               </span>
             {/each}
           </div>
+        </div>
+      {/if}
+
+      {#if members.length > 0}
+        <div class="flex flex-col gap-1.5">
+          <span class="text-xs font-medium text-muted-foreground uppercase tracking-wide">Assignee</span>
+          <select
+            value={issue.assignee?.id ?? ''}
+            onchange={(e) => setAssignee(e.currentTarget.value || null)}
+            class="rounded-md border border-border bg-background px-2 py-1.5 text-sm focus:outline-none focus:ring-1 focus:ring-ring"
+          >
+            <option value="">Unassigned</option>
+            {#each members as m}
+              <option value={m.user_id}>{m.user_id}</option>
+            {/each}
+          </select>
         </div>
       {/if}
 
