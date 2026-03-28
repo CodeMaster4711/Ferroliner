@@ -177,6 +177,8 @@
       <KanbanBoard
         issues={filteredIssues}
         {statuses}
+        {orgId}
+        {projectId}
         onIssueClick={(issue) => goto(`/${orgId}/projects/${projectId}/issues/${issue.id}`)}
       />
     {:else}

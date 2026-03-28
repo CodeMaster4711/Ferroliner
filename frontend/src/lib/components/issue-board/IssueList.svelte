@@ -14,8 +14,8 @@
   } = $props();
 </script>
 
-<div class="overflow-x-auto">
-  <table class="w-full border-collapse text-sm">
+<div class="w-full overflow-x-auto">
+  <table class="w-full min-w-[500px] border-collapse text-sm">
     <thead>
       <tr class="border-b border-border bg-muted/30">
         <th class="w-6 px-3 py-2"></th>
