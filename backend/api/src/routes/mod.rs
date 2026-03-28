@@ -9,7 +9,9 @@ use tower_http::cors::CorsLayer;
 use tower_http::trace::TraceLayer;
 use tracing::{info_span, Span};
 
+pub mod issues;
 pub mod organizations;
+pub mod projects;
 pub mod users;
 
 pub fn create_router() -> Router<AppState> {
@@ -61,7 +63,9 @@ pub fn create_router() -> Router<AppState> {
 
     let api_router = Router::new()
         .merge(users::users_routes())
-        .merge(organizations::routes());
+        .merge(organizations::routes())
+        .merge(projects::routes())
+        .merge(issues::routes());
 
     Router::new()
         .nest("/api", api_router)

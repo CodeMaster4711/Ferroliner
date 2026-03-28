@@ -1,18 +1,34 @@
 pub mod entities;
 
 pub use entities::invalid_jwt;
+pub use entities::issue;
+pub use entities::issue_label;
+pub use entities::issue_relationship;
+pub use entities::issue_status;
 pub use entities::key;
+pub use entities::label;
 pub use entities::organization;
 pub use entities::permission;
+pub use entities::project;
+pub use entities::project_issue_counter;
+pub use entities::project_member;
 pub use entities::role;
 pub use entities::role_permission;
 pub use entities::user;
 pub use entities::user_organization;
 
 pub use entities::invalid_jwt::Entity as InvalidJwt;
+pub use entities::issue::Entity as Issue;
+pub use entities::issue_label::Entity as IssueLabel;
+pub use entities::issue_relationship::Entity as IssueRelationship;
+pub use entities::issue_status::Entity as IssueStatus;
 pub use entities::key::Entity as Key;
+pub use entities::label::Entity as Label;
 pub use entities::organization::Entity as Organization;
 pub use entities::permission::Entity as Permission;
+pub use entities::project::Entity as Project;
+pub use entities::project_issue_counter::Entity as ProjectIssueCounter;
+pub use entities::project_member::Entity as ProjectMember;
 pub use entities::role::Entity as Role;
 pub use entities::role_permission::Entity as RolePermission;
 pub use entities::user::Entity as User;

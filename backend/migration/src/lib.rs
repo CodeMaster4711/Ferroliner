@@ -5,6 +5,9 @@ mod m20240101_000002_create_invalid_jwt;
 mod m20240101_000003_create_user;
 mod m20240101_000004_add_2fa_fields;
 mod m20240101_000005_add_rbac_tables;
+mod m20250001_000006_create_projects;
+mod m20250001_000007_create_issue_workflow;
+mod m20250001_000008_create_issues;
 
 pub struct Migrator;
 
@@ -17,6 +20,9 @@ impl MigratorTrait for Migrator {
             Box::new(m20240101_000003_create_user::Migration),
             Box::new(m20240101_000004_add_2fa_fields::Migration),
             Box::new(m20240101_000005_add_rbac_tables::Migration),
+            Box::new(m20250001_000006_create_projects::Migration),
+            Box::new(m20250001_000007_create_issue_workflow::Migration),
+            Box::new(m20250001_000008_create_issues::Migration),
         ]
     }
 }

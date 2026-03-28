@@ -64,4 +64,11 @@ export class ApiClient {
   static delete(path: string): Promise<Response> {
     return this.fetch(path, { method: 'DELETE' });
   }
+
+  static patch(path: string, body?: unknown): Promise<Response> {
+    return this.fetch(path, {
+      method: 'PATCH',
+      body: body !== undefined ? JSON.stringify(body) : undefined,
+    });
+  }
 }

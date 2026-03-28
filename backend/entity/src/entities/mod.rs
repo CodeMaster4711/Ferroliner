@@ -1,7 +1,15 @@
 pub mod invalid_jwt;
+pub mod issue;
+pub mod issue_label;
+pub mod issue_relationship;
+pub mod issue_status;
 pub mod key;
+pub mod label;
 pub mod organization;
 pub mod permission;
+pub mod project;
+pub mod project_issue_counter;
+pub mod project_member;
 pub mod role;
 pub mod role_permission;
 pub mod user;

@@ -48,6 +48,20 @@ thiserror = { workspace = true }
 rand = { workspace = true }
 base64 = { workspace = true }
 
+# HTTP client
+reqwest = { workspace = true }
+
+# Cryptography extras
+hmac = { workspace = true }
+hex = { workspace = true }
+constant_time_eq = { workspace = true }
+
+# Object storage
+object_store = { workspace = true }
+
+# Streaming
+tokio-stream = { workspace = true }
+
 # Logging
 tracing = { workspace = true }
 tracing-subscriber = { workspace = true }

@@ -70,6 +70,21 @@ pub async fn initialize_database(
         ("users.update", "users", "update", "Update user details"),
         ("users.delete", "users", "delete", "Delete users"),
         ("system.manage", "system", "manage", "Manage system settings"),
+        ("projects.view", "projects", "view", "View projects"),
+        ("projects.create", "projects", "create", "Create projects"),
+        ("projects.update", "projects", "update", "Update projects"),
+        ("projects.delete", "projects", "delete", "Delete projects"),
+        ("issues.view", "issues", "view", "View issues"),
+        ("issues.create", "issues", "create", "Create issues"),
+        ("issues.update", "issues", "update", "Update issues"),
+        ("issues.delete", "issues", "delete", "Delete issues"),
+        ("issues.comment", "issues", "comment", "Comment on issues"),
+        ("cycles.manage", "cycles", "manage", "Manage cycles"),
+        ("git.connect", "git", "connect", "Connect git integrations"),
+        ("git.disconnect", "git", "disconnect", "Disconnect git integrations"),
+        ("notifications.view", "notifications", "view", "View notifications"),
+        ("tokens.manage", "tokens", "manage", "Manage personal access tokens"),
+        ("attachments.manage", "attachments", "manage", "Manage attachments"),
     ];
 
     let mut permission_map = std::collections::HashMap::new();
