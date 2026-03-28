@@ -9,27 +9,27 @@
 
   const PUBLIC_ROUTES = ['/signin', '/otp', '/change-password'];
 
-  onMount(() => {
-    authStore.init(data.user ?? null, data.token ?? null);
+  $effect(() => {
+    const user = data.user ?? null;
+    const token = data.token ?? null;
+    authStore.init(user, token);
 
+    const currentPath = $page.url.pathname;
+    const isPublicRoute = PUBLIC_ROUTES.some((route) => currentPath.startsWith(route));
+    const isAuthenticated = !!user && !!token;
+
+    if (!isAuthenticated && !isPublicRoute) {
+      goto('/signin');
+    } else if (isAuthenticated && user?.force_password_change && currentPath !== '/change-password') {
+      goto('/change-password');
+    }
+  });
+
+  onMount(() => {
     const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
     const apply = (dark: boolean) => document.documentElement.classList.toggle('dark', dark);
     apply(mediaQuery.matches);
     mediaQuery.addEventListener('change', (e) => apply(e.matches));
-  });
-
-  $effect(() => {
-    const state = $authStore;
-    if (state.isLoading) return;
-
-    const currentPath = $page.url.pathname;
-    const isPublicRoute = PUBLIC_ROUTES.some((route) => currentPath.startsWith(route));
-
-    if (!state.isAuthenticated && !isPublicRoute) {
-      goto('/signin');
-    } else if (state.isAuthenticated && state.user?.force_password_change && currentPath !== '/change-password') {
-      goto('/change-password');
-    }
   });
 </script>
 
