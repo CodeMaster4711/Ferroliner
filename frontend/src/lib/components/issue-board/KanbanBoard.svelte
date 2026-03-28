@@ -72,10 +72,10 @@
 </script>
 
 <div class="min-h-0 flex-1 overflow-x-auto" style="width: 100%; height: 100%">
-<div class="grid gap-2 p-3" style="grid-template-columns: repeat({columns().length}, minmax(220px, 1fr)); min-width: max-content; width: 100%; height: 100%; align-items: stretch;">
+<div class="grid gap-2 p-3" style="grid-template-columns: repeat({columns().length}, minmax(220px, 1fr)); width: 100%; height: 100%; align-items: stretch;">
   {#each columns() as column (column.status.id)}
     <div
-      class="flex min-h-0 flex-col rounded-xl transition-colors duration-150
+      class="flex min-h-0 min-w-0 flex-col overflow-hidden rounded-xl transition-colors duration-150
         {dragOverStatusId === column.status.id ? 'bg-accent/20 ring-1 ring-ring/40' : 'bg-muted/30'}"
       ondragover={(e) => onDragOver(e, column.status.id)}
       ondragleave={onDragLeave}

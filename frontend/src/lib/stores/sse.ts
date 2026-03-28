@@ -20,7 +20,7 @@ export function connectSse() {
     source.addEventListener('notification.created', (e) => {
       try {
         const notification = JSON.parse(e.data);
-        notificationStore.setNotifications([notification]);
+        notificationStore.addNotification(notification);
       } catch {}
     });
 

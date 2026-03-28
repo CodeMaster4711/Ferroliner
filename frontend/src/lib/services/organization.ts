@@ -53,6 +53,12 @@ export class OrganizationService {
     return res.json();
   }
 
+  static async getMe(): Promise<OrgUserResponse> {
+    const res = await ApiClient.get('/organization/me');
+    if (!res.ok) throw new Error('failed to fetch current user');
+    return res.json();
+  }
+
   static async listUsers(): Promise<OrgUserResponse[]> {
     const res = await ApiClient.get('/organization/users');
     if (!res.ok) throw new Error('failed to fetch users');

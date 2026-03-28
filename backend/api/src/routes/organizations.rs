@@ -14,6 +14,7 @@ pub fn routes() -> Router<AppState> {
     Router::new()
         .route("/organization", axum::routing::get(get_organization))
         .route("/organization", axum::routing::put(update_organization))
+        .route("/organization/me", axum::routing::get(get_me))
         .route("/organization/roles", axum::routing::get(get_roles))
         .route("/organization/users", axum::routing::get(list_users))
         .route("/organization/users", axum::routing::post(create_user))
@@ -136,6 +137,50 @@ async fn update_organization(
         description: updated.description,
         created_at: updated.created_at.to_string(),
         updated_at: updated.updated_at.to_string(),
+    }))
+}
+
+async fn get_me(
+    AuthenticatedUser(claims): AuthenticatedUser,
+    State(state): State<AppState>,
+) -> Result<Json<UserResponse>, StatusCode> {
+    let db = &state.db_conn;
+    let org = Organization::find()
+        .one(db)
+        .await
+        .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?
+        .ok_or(StatusCode::NOT_FOUND)?;
+
+    let rbac = RbacService::new(state.db_conn.clone());
+    let user = User::find_by_id(claims.user_id)
+        .one(db)
+        .await
+        .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?
+        .ok_or(StatusCode::NOT_FOUND)?;
+
+    let role = rbac
+        .get_user_role(claims.user_id, org.id)
+        .await
+        .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?
+        .ok_or(StatusCode::NOT_FOUND)?;
+
+    let user_org = entity::UserOrganization::find()
+        .filter(entity::user_organization::Column::UserId.eq(claims.user_id))
+        .filter(entity::user_organization::Column::OrganizationId.eq(org.id))
+        .one(db)
+        .await
+        .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?
+        .ok_or(StatusCode::NOT_FOUND)?;
+
+    Ok(Json(UserResponse {
+        id: user.id,
+        username: user.name,
+        email: user.email,
+        role_id: role.id,
+        role_name: role.name,
+        force_password_change: user.force_password_change,
+        two_factor_enabled: user.two_factor_enabled,
+        joined_at: user_org.joined_at.to_string(),
     }))
 }
 

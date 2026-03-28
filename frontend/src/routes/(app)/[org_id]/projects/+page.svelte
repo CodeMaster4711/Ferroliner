@@ -20,9 +20,8 @@
 
   onMount(async () => {
     try {
-      const users = await OrganizationService.listUsers();
-      const me = users.find((u) => u.id === $authStore.user?.id);
-      isAdmin = me?.role_name?.toLowerCase().includes('admin') ?? false;
+      const me = await OrganizationService.getMe();
+      isAdmin = me.role_name.toLowerCase().includes('admin');
     } catch {
       isAdmin = false;
     }

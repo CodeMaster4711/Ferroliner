@@ -7,17 +7,17 @@
 
 <button
   {onclick}
-  class="group w-full rounded-lg border border-border/60 bg-card px-3 py-2.5 text-left
+  class="group w-full min-w-0 overflow-hidden rounded-lg border border-border/60 bg-card px-3 py-2.5 text-left
          transition-all duration-100 hover:border-border hover:shadow-sm hover:bg-card/80"
 >
   <!-- Title -->
-  <p class="text-[13px] font-medium leading-snug text-foreground line-clamp-2 mb-2.5">
+  <p class="text-[13px] font-medium leading-snug text-foreground line-clamp-2 mb-2.5 break-words">
     {issue.title}
   </p>
 
   <!-- Description preview -->
   {#if issue.description}
-    <p class="text-[11px] leading-relaxed text-muted-foreground/70 line-clamp-2 mb-2 -mt-1">
+    <p class="text-[11px] leading-relaxed text-muted-foreground/70 line-clamp-1 mb-2 -mt-1 break-words">
       {issue.description.replace(/[#*`\[\]>_~]/g, '').trim()}
     </p>
   {/if}

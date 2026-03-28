@@ -38,6 +38,12 @@ function createNotificationStore() {
         unreadCount: 0,
       }));
     },
+    addNotification(notification: Notification) {
+      update((s) => ({
+        notifications: [notification, ...s.notifications],
+        unreadCount: s.unreadCount + (notification.read_at ? 0 : 1),
+      }));
+    },
     reset() {
       set({ notifications: [], unreadCount: 0 });
     },
