@@ -8,7 +8,12 @@ use sea_orm::{ActiveModelTrait, ActiveValue, ColumnTrait, EntityTrait, QueryFilt
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
-use crate::{auth::middleware::AuthenticatedUser, rbac_service::RbacService, AppState};
+use crate::{
+    auth::{crypto::decrypt_password, middleware::AuthenticatedUser},
+    auth_service::AuthService,
+    rbac_service::RbacService,
+    AppState,
+};
 
 pub fn routes() -> Router<AppState> {
     Router::new()
@@ -341,9 +346,17 @@ async fn create_user(
         return Err(StatusCode::FORBIDDEN);
     }
 
+    let auth_svc = AuthService::new(state.db_conn.clone());
+    let rsa_key = auth_svc
+        .get_or_create_rsa_key("main")
+        .await
+        .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+    let plain_password = decrypt_password(&req.password, &rsa_key.private_key)
+        .map_err(|_| StatusCode::UNPROCESSABLE_ENTITY)?;
+
     let user_id = Uuid::new_v4();
     let salt = crate::auth::crypto::generate_salt();
-    let hashed_password = crate::auth::crypto::hash_password(&req.password, &salt)
+    let hashed_password = crate::auth::crypto::hash_password(&plain_password, &salt)
         .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
 
     let new_user = user::ActiveModel {
