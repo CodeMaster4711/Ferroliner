@@ -65,6 +65,7 @@
   </Sidebar.Header>
 
   <Sidebar.Content>
+    <!-- Personal views -->
     <Sidebar.Group>
       <Sidebar.Menu>
         <Sidebar.MenuItem>
@@ -73,9 +74,9 @@
             tooltipContent="My Issues"
           >
             {#snippet child({ props })}
-              <a href="/{orgId}/my-issues" {...props}>
-                <InboxIcon />
-                <span>My Issues</span>
+              <a href="/{orgId}/my-issues" {...props} class="flex items-center gap-2 {props.class ?? ''}">
+                <InboxIcon class="h-3.5 w-3.5 flex-shrink-0" />
+                <span class="text-sm">My Issues</span>
               </a>
             {/snippet}
           </Sidebar.MenuButton>
@@ -83,8 +84,11 @@
       </Sidebar.Menu>
     </Sidebar.Group>
 
+    <!-- Projects -->
     <Sidebar.Group class="group-data-[collapsible=icon]:hidden">
-      <Sidebar.GroupLabel>Projects</Sidebar.GroupLabel>
+      <Sidebar.GroupLabel class="px-3 text-[10px] font-semibold uppercase tracking-widest text-muted-foreground/60">
+        Projects
+      </Sidebar.GroupLabel>
       <Sidebar.Menu>
         {#each projects as project (project.id)}
           <Sidebar.MenuItem>
@@ -93,14 +97,14 @@
               tooltipContent={project.name}
             >
               {#snippet child({ props })}
-                <a href="/{orgId}/projects/{project.id}/issues" {...props}>
+                <a href="/{orgId}/projects/{project.id}/issues" {...props} class="flex items-center gap-2 {props.class ?? ''}">
                   <span
-                    class="flex size-5 items-center justify-center rounded text-xs font-bold text-white flex-shrink-0"
+                    class="flex h-4 w-4 flex-shrink-0 items-center justify-center rounded text-[9px] font-bold text-white"
                     style="background-color: {project.color ?? '#6366f1'}"
                   >
                     {project.identifier.slice(0, 2)}
                   </span>
-                  <span class="truncate">{project.name}</span>
+                  <span class="truncate text-sm">{project.name}</span>
                 </a>
               {/snippet}
             </Sidebar.MenuButton>
@@ -108,11 +112,11 @@
         {/each}
 
         <Sidebar.MenuItem>
-          <Sidebar.MenuButton tooltipContent="New Project">
+          <Sidebar.MenuButton tooltipContent="New Project" class="text-muted-foreground/60 hover:text-muted-foreground">
             {#snippet child({ props })}
-              <a href="/{orgId}/projects" {...props}>
-                <PlusIcon />
-                <span>New Project</span>
+              <a href="/{orgId}/projects" {...props} class="flex items-center gap-2 {props.class ?? ''}">
+                <PlusIcon class="h-3.5 w-3.5 flex-shrink-0" />
+                <span class="text-sm">New Project</span>
               </a>
             {/snippet}
           </Sidebar.MenuButton>

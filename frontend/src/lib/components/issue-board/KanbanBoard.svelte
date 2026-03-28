@@ -9,24 +9,26 @@
     statuses,
     orgId,
     projectId,
+    showEmptyColumns = true,
     onIssueClick,
   }: {
     issues: Issue[];
     statuses: IssueStatus[];
     orgId: string;
     projectId: string;
+    showEmptyColumns?: boolean;
     onIssueClick: (issue: Issue) => void;
   } = $props();
 
-  const columns = $derived(
-    statuses
-      .slice()
-      .sort((a, b) => a.position - b.position)
+  const columns = $derived(() => {
+    const sorted = statuses.slice().sort((a, b) => a.position - b.position);
+    return sorted
       .map((status) => ({
         status,
         issues: issues.filter((i) => i.status.id === status.id),
       }))
-  );
+      .filter((col) => showEmptyColumns || col.issues.length > 0);
+  });
 
   let draggedIssueId = $state<string | null>(null);
   let dragOverStatusId = $state<string | null>(null);
@@ -41,21 +43,21 @@
     dragOverStatusId = statusId;
   }
 
-  function onDragLeave() {
-    dragOverStatusId = null;
+  function onDragLeave(e: DragEvent) {
+    const related = e.relatedTarget as HTMLElement | null;
+    if (!related || !(e.currentTarget as HTMLElement).contains(related)) {
+      dragOverStatusId = null;
+    }
   }
 
   async function onDrop(e: DragEvent, statusId: string) {
     e.preventDefault();
     dragOverStatusId = null;
-
     const issueId = draggedIssueId ?? e.dataTransfer?.getData('text/plain');
     draggedIssueId = null;
     if (!issueId) return;
-
     const issue = issues.find((i) => i.id === issueId);
     if (!issue || issue.status.id === statusId) return;
-
     try {
       const updated = await IssuesService.update(orgId, projectId, issueId, { status_id: statusId });
       issueStore.updateIssue(updated);
@@ -68,44 +70,51 @@
   }
 </script>
 
-<div class="flex h-full gap-2 overflow-x-auto p-3">
-  {#each columns as column (column.status.id)}
+<div class="min-h-0 flex-1 overflow-x-auto" style="width: 100%; height: 100%">
+<div class="grid gap-2 p-3" style="grid-template-columns: repeat({columns().length}, minmax(220px, 1fr)); min-width: max-content; width: 100%; height: 100%; align-items: stretch;">
+  {#each columns() as column (column.status.id)}
     <div
-      class="flex flex-shrink-0 flex-col rounded-lg border transition-colors duration-150
-        {dragOverStatusId === column.status.id ? 'border-ring bg-accent/30' : 'border-transparent bg-muted/40'}"
-      style="width: clamp(220px, calc((100% - {(columns.length - 1) * 8}px) / {columns.length}), 340px)"
+      class="flex min-h-0 flex-col rounded-xl transition-colors duration-150
+        {dragOverStatusId === column.status.id ? 'bg-accent/20 ring-1 ring-ring/40' : 'bg-muted/30'}"
       ondragover={(e) => onDragOver(e, column.status.id)}
       ondragleave={onDragLeave}
       ondrop={(e) => onDrop(e, column.status.id)}
       role="region"
       aria-label={column.status.name}
     >
-      <div class="flex items-center gap-2 px-3 py-2.5">
-        <span class="h-2 w-2 flex-shrink-0 rounded-full" style="background-color: {column.status.color}"></span>
-        <span class="text-xs font-semibold uppercase tracking-wide text-muted-foreground">{column.status.name}</span>
-        <span class="ml-auto flex h-5 w-5 items-center justify-center rounded-full bg-muted text-[10px] font-medium text-muted-foreground">
-          {column.issues.length}
+      <!-- Column header -->
+      <div class="flex items-center gap-2 px-3 py-3">
+        <span class="relative flex h-3.5 w-3.5 flex-shrink-0 items-center justify-center">
+          <span class="absolute h-2 w-2 rounded-full opacity-30" style="background-color: {column.status.color}"></span>
+          <span class="h-1.5 w-1.5 rounded-full" style="background-color: {column.status.color}"></span>
         </span>
+        <span class="text-xs font-medium text-foreground">{column.status.name}</span>
+        <span class="ml-1 text-xs text-muted-foreground">{column.issues.length}</span>
       </div>
 
-      <div class="flex flex-1 flex-col gap-1.5 overflow-y-auto px-2 pb-2">
+      <!-- Cards -->
+      <div class="flex flex-1 flex-col gap-2 overflow-y-auto px-2 pb-2">
         {#each column.issues as issue (issue.id)}
           <div
             draggable="true"
             ondragstart={(e) => onDragStart(e, issue)}
             ondragend={onDragEnd}
-            class="cursor-grab active:cursor-grabbing transition-opacity {draggedIssueId === issue.id ? 'opacity-40' : 'opacity-100'}"
+            class="cursor-grab active:cursor-grabbing transition-opacity duration-150
+              {draggedIssueId === issue.id ? 'opacity-30 scale-95' : 'opacity-100'}"
           >
             <KanbanCard {issue} onclick={() => onIssueClick(issue)} />
           </div>
         {/each}
 
-        {#if column.issues.length === 0}
-          <div class="flex min-h-[60px] items-center justify-center rounded-md border-2 border-dashed border-border/40">
-            <span class="text-xs text-muted-foreground/40">Drop here</span>
-          </div>
-        {/if}
+        <!-- Drop target when empty -->
+        <div
+          class="flex min-h-[48px] flex-1 items-start justify-center pt-2
+            {dragOverStatusId === column.status.id && column.issues.length === 0 ? 'opacity-100' : 'opacity-0'}"
+        >
+          <span class="text-xs text-muted-foreground/50">Drop here</span>
+        </div>
       </div>
     </div>
   {/each}
+</div>
 </div>

@@ -23,7 +23,7 @@
   const project = $derived($projectStore.currentProject);
 </script>
 
-<div class="flex h-full flex-col overflow-hidden">
+<div class="flex min-h-0 flex-1 flex-col overflow-hidden">
   {#if project}
     <div class="flex items-center gap-4 border-b border-border px-4 py-2">
       <div class="flex items-center gap-2">
@@ -53,7 +53,7 @@
     </div>
   {/if}
 
-  <div class="flex flex-1 overflow-hidden">
+  <div class="flex min-h-0 flex-1 overflow-hidden">
     {@render children()}
   </div>
 </div>

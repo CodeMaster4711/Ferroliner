@@ -26,19 +26,17 @@
   });
 </script>
 
-<Sidebar.Provider>
+<Sidebar.Provider class="h-screen overflow-hidden">
   <AppSidebar />
-  <Sidebar.Inset>
-    <div class="flex h-screen flex-col overflow-hidden">
-      <header class="flex h-10 shrink-0 items-center gap-2 border-b border-border px-4">
-        <Sidebar.Trigger class="-ms-1" />
-        <div class="ml-auto">
-          <NotificationBell />
-        </div>
-      </header>
-      <main class="flex flex-1 flex-col overflow-hidden">
-        {@render children()}
-      </main>
-    </div>
+  <Sidebar.Inset class="flex min-h-0 flex-1 flex-col overflow-hidden">
+    <header class="flex h-10 shrink-0 items-center gap-2 border-b border-border px-4">
+      <Sidebar.Trigger class="-ms-1" />
+      <div class="ml-auto">
+        <NotificationBell />
+      </div>
+    </header>
+    <main class="flex min-h-0 flex-1 flex-col overflow-hidden">
+      {@render children()}
+    </main>
   </Sidebar.Inset>
 </Sidebar.Provider>

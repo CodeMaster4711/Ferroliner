@@ -7,38 +7,40 @@
 
 <button
   {onclick}
-  class="group w-full rounded-md border border-border bg-card px-3 py-2.5 text-left shadow-sm transition-all hover:border-ring/60 hover:shadow-md"
+  class="group w-full rounded-lg border border-border/60 bg-card px-3 py-2.5 text-left
+         transition-all duration-100 hover:border-border hover:shadow-sm hover:bg-card/80"
 >
-  <div class="flex items-center justify-between gap-2 mb-1.5">
-    <span class="text-[11px] font-mono text-muted-foreground/70">{issue.identifier}</span>
-    <IssuePriorityIcon priority={issue.priority} />
-  </div>
+  <!-- Title -->
+  <p class="text-[13px] font-medium leading-snug text-foreground line-clamp-2 mb-2.5">
+    {issue.title}
+  </p>
 
-  <p class="text-sm text-card-foreground leading-snug line-clamp-2">{issue.title}</p>
-
+  <!-- Labels -->
   {#if issue.labels.length > 0}
-    <div class="mt-2 flex flex-wrap gap-1">
+    <div class="mb-2 flex flex-wrap gap-1">
       {#each issue.labels as label}
         <span
-          class="rounded-full px-1.5 py-0.5 text-[10px] font-medium"
-          style="background-color: {label.color}20; color: {label.color}"
+          class="inline-flex items-center rounded-full px-1.5 py-0.5 text-[10px] font-medium"
+          style="background-color: {label.color}18; color: {label.color}; border: 1px solid {label.color}30"
         >{label.name}</span>
       {/each}
     </div>
   {/if}
 
-  <div class="mt-2 flex items-center justify-between gap-2">
+  <!-- Footer: ID + priority + assignee -->
+  <div class="flex items-center gap-1.5 text-muted-foreground">
+    <IssuePriorityIcon priority={issue.priority} />
+    <span class="text-[11px] font-mono opacity-60 flex-1">{issue.identifier}</span>
+
     {#if issue.due_date}
-      <span class="text-[10px] text-muted-foreground">
-        {new Date(issue.due_date).toLocaleDateString()}
+      <span class="text-[10px] opacity-50">
+        {new Date(issue.due_date).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}
       </span>
-    {:else}
-      <span></span>
     {/if}
 
     {#if issue.assignee}
       <span
-        class="flex h-5 w-5 items-center justify-center rounded-full bg-primary/20 text-[10px] font-semibold text-primary"
+        class="flex h-5 w-5 flex-shrink-0 items-center justify-center rounded-full bg-primary/15 text-[9px] font-bold text-primary"
         title={issue.assignee.username}
       >
         {issue.assignee.username.slice(0, 1).toUpperCase()}
