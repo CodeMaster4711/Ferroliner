@@ -6,6 +6,7 @@
   import { Alert, AlertDescription } from '$lib/components/ui/alert/index.js';
   import { SettingsService } from '$lib/services/settings';
   import { AuthService } from '$lib/services/auth';
+  import { authStore } from '$lib/stores/auth';
   import { goto } from '$app/navigation';
 
   let newPassword = $state('');
@@ -35,6 +36,10 @@
       const encryptedNewPassword = await AuthService.encryptPassword(newPassword, publicKey);
 
       await SettingsService.changePassword(encryptedOldPassword, encryptedNewPassword);
+      const user = $authStore.user;
+      if (user) {
+        authStore.login({ ...user, force_password_change: false }, $authStore.token!);
+      }
       goto('/');
     } catch (error) {
       errorMessage = error instanceof Error ? error.message : 'Passwortänderung fehlgeschlagen';
