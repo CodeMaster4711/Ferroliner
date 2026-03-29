@@ -1,9 +1,12 @@
 <script lang="ts">
   import { OrganizationService } from '$lib/services/organization';
   import { AuthService } from '$lib/services/auth';
+  import { roleStore, canManageUsers } from '$lib/stores/role';
   import type { OrgResponse, OrgUserResponse, RoleResponse } from '$lib/services/organization';
   import { authStore } from '$lib/stores/auth';
   import { onMount } from 'svelte';
+
+  const role = $derived($roleStore.role);
 
   let org = $state<OrgResponse | null>(null);
   let users = $state<OrgUserResponse[]>([]);
@@ -111,13 +114,15 @@
       >
         General
       </button>
-      <button
-        onclick={() => (tab = 'users')}
-        class="rounded px-2.5 py-1 text-xs transition-colors
-          {tab === 'users' ? 'bg-accent text-foreground' : 'text-muted-foreground hover:text-foreground'}"
-      >
-        Users
-      </button>
+      {#if canManageUsers(role)}
+        <button
+          onclick={() => (tab = 'users')}
+          class="rounded px-2.5 py-1 text-xs transition-colors
+            {tab === 'users' ? 'bg-accent text-foreground' : 'text-muted-foreground hover:text-foreground'}"
+        >
+          Users
+        </button>
+      {/if}
     </div>
   </div>
 

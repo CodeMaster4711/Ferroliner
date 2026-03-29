@@ -61,7 +61,7 @@
     </div>
   </div>
 
-  <div class="flex w-full flex-col items-center justify-center px-8 lg:w-72 lg:flex-none lg:px-0">
+  <div class="flex flex-1 flex-col items-center justify-center px-8 lg:px-16">
     <div class="w-full max-w-xs">
       <div class="mb-8">
         <h2 class="text-2xl font-semibold tracking-tight">Sign in</h2>

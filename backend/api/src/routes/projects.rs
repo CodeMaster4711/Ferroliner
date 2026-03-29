@@ -10,7 +10,10 @@ use entity::User;
 use sea_orm::EntityTrait;
 
 use crate::{
-    auth::middleware::AuthenticatedUser,
+    auth::{
+        middleware::AuthenticatedUser,
+        rbac::{CanCreateProject, CanDeleteProject, CanManageIssues, CanUpdateProject, CanViewProjects},
+    },
     project_service::{ProjectError, ProjectService},
     AppState,
 };
@@ -158,7 +161,7 @@ fn project_err(e: ProjectError) -> StatusCode {
 }
 
 async fn list_projects(
-    AuthenticatedUser(_claims): AuthenticatedUser,
+    CanViewProjects(_claims): CanViewProjects,
     State(state): State<AppState>,
     Path(org_id): Path<Uuid>,
 ) -> Result<Json<Vec<ProjectResponse>>, StatusCode> {
@@ -184,7 +187,7 @@ async fn list_projects(
 }
 
 async fn create_project(
-    AuthenticatedUser(claims): AuthenticatedUser,
+    CanCreateProject(claims): CanCreateProject,
     State(state): State<AppState>,
     Path(org_id): Path<Uuid>,
     Json(req): Json<CreateProjectRequest>,
@@ -217,7 +220,7 @@ async fn create_project(
 }
 
 async fn get_project(
-    AuthenticatedUser(_claims): AuthenticatedUser,
+    CanViewProjects(_claims): CanViewProjects,
     State(state): State<AppState>,
     Path((_org_id, project_id)): Path<(Uuid, Uuid)>,
 ) -> Result<Json<ProjectResponse>, StatusCode> {
@@ -238,7 +241,7 @@ async fn get_project(
 }
 
 async fn update_project(
-    AuthenticatedUser(_claims): AuthenticatedUser,
+    CanUpdateProject(_claims): CanUpdateProject,
     State(state): State<AppState>,
     Path((_org_id, project_id)): Path<(Uuid, Uuid)>,
     Json(req): Json<UpdateProjectRequest>,
@@ -263,7 +266,7 @@ async fn update_project(
 }
 
 async fn delete_project(
-    AuthenticatedUser(_claims): AuthenticatedUser,
+    CanDeleteProject(_claims): CanDeleteProject,
     State(state): State<AppState>,
     Path((_org_id, project_id)): Path<(Uuid, Uuid)>,
 ) -> Result<StatusCode, StatusCode> {
@@ -273,7 +276,7 @@ async fn delete_project(
 }
 
 async fn list_members(
-    AuthenticatedUser(_claims): AuthenticatedUser,
+    CanViewProjects(_claims): CanViewProjects,
     State(state): State<AppState>,
     Path((_org_id, project_id)): Path<(Uuid, Uuid)>,
 ) -> Result<Json<Vec<MemberResponse>>, StatusCode> {
@@ -299,7 +302,7 @@ async fn list_members(
 }
 
 async fn add_member(
-    AuthenticatedUser(_claims): AuthenticatedUser,
+    CanDeleteProject(_claims): CanDeleteProject,
     State(state): State<AppState>,
     Path((_org_id, project_id)): Path<(Uuid, Uuid)>,
     Json(req): Json<AddMemberRequest>,
@@ -325,7 +328,7 @@ async fn add_member(
 }
 
 async fn remove_member(
-    AuthenticatedUser(_claims): AuthenticatedUser,
+    CanDeleteProject(_claims): CanDeleteProject,
     State(state): State<AppState>,
     Path((_org_id, project_id, user_id)): Path<(Uuid, Uuid, Uuid)>,
 ) -> Result<StatusCode, StatusCode> {
@@ -337,7 +340,7 @@ async fn remove_member(
 }
 
 async fn list_statuses(
-    AuthenticatedUser(_claims): AuthenticatedUser,
+    CanViewProjects(_claims): CanViewProjects,
     State(state): State<AppState>,
     Path((_org_id, project_id)): Path<(Uuid, Uuid)>,
 ) -> Result<Json<Vec<StatusResponse>>, StatusCode> {
@@ -360,7 +363,7 @@ async fn list_statuses(
 }
 
 async fn create_status(
-    AuthenticatedUser(_claims): AuthenticatedUser,
+    CanUpdateProject(_claims): CanUpdateProject,
     State(state): State<AppState>,
     Path((_org_id, project_id)): Path<(Uuid, Uuid)>,
     Json(req): Json<CreateStatusRequest>,
@@ -382,7 +385,7 @@ async fn create_status(
 }
 
 async fn update_status(
-    AuthenticatedUser(_claims): AuthenticatedUser,
+    CanUpdateProject(_claims): CanUpdateProject,
     State(state): State<AppState>,
     Path((_org_id, _project_id, status_id)): Path<(Uuid, Uuid, Uuid)>,
     Json(req): Json<UpdateStatusRequest>,
@@ -404,7 +407,7 @@ async fn update_status(
 }
 
 async fn delete_status(
-    AuthenticatedUser(_claims): AuthenticatedUser,
+    CanUpdateProject(_claims): CanUpdateProject,
     State(state): State<AppState>,
     Path((_org_id, _project_id, status_id)): Path<(Uuid, Uuid, Uuid)>,
 ) -> Result<StatusCode, StatusCode> {
@@ -414,7 +417,7 @@ async fn delete_status(
 }
 
 async fn list_labels(
-    AuthenticatedUser(_claims): AuthenticatedUser,
+    CanViewProjects(_claims): CanViewProjects,
     State(state): State<AppState>,
     Path((_org_id, project_id)): Path<(Uuid, Uuid)>,
 ) -> Result<Json<Vec<LabelResponse>>, StatusCode> {
@@ -435,7 +438,7 @@ async fn list_labels(
 }
 
 async fn create_label(
-    AuthenticatedUser(_claims): AuthenticatedUser,
+    CanUpdateProject(_claims): CanUpdateProject,
     State(state): State<AppState>,
     Path((_org_id, project_id)): Path<(Uuid, Uuid)>,
     Json(req): Json<CreateLabelRequest>,
@@ -455,7 +458,7 @@ async fn create_label(
 }
 
 async fn update_label(
-    AuthenticatedUser(_claims): AuthenticatedUser,
+    CanUpdateProject(_claims): CanUpdateProject,
     State(state): State<AppState>,
     Path((_org_id, _project_id, label_id)): Path<(Uuid, Uuid, Uuid)>,
     Json(req): Json<UpdateLabelRequest>,
@@ -475,7 +478,7 @@ async fn update_label(
 }
 
 async fn delete_label(
-    AuthenticatedUser(_claims): AuthenticatedUser,
+    CanUpdateProject(_claims): CanUpdateProject,
     State(state): State<AppState>,
     Path((_org_id, _project_id, label_id)): Path<(Uuid, Uuid, Uuid)>,
 ) -> Result<StatusCode, StatusCode> {

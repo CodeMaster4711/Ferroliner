@@ -8,6 +8,7 @@
   import IssueList from '$lib/components/issue-board/IssueList.svelte';
   import NewIssueModal from '$lib/components/issue-board/NewIssueModal.svelte';
   import DisplayPopover from '$lib/components/issue-board/DisplayPopover.svelte';
+  import { roleStore, canEditIssue } from '$lib/stores/role';
   import type { IssueStatus, Label, Member } from '$lib/types';
   const orgId = $derived($page.params.org_id ?? '');
   const projectId = $derived($page.params.project_id ?? '');
@@ -16,6 +17,7 @@
   let labels = $state<Label[]>([]);
   let members = $state<Member[]>([]);
   let showNewIssue = $state(false);
+  const role = $derived($roleStore.role);
 
   let viewMode = $state<'board' | 'list'>('board');
   let groupBy = $state<'status' | 'priority'>('status');
@@ -132,17 +134,18 @@
     <div class="ml-auto flex items-center gap-1">
       <DisplayPopover bind:viewMode bind:groupBy bind:showEmptyColumns />
 
-      <div class="h-4 w-px bg-border mx-0.5"></div>
-
-      <button
-        onclick={() => (showNewIssue = true)}
-        class="flex items-center gap-1.5 rounded-md bg-primary px-2.5 py-1.5 text-xs font-medium text-primary-foreground hover:bg-primary/90 transition-colors"
-      >
-        <svg viewBox="0 0 16 16" fill="none" class="h-3 w-3" stroke="currentColor" stroke-width="2.5">
-          <path d="M8 2v12M2 8h12" stroke-linecap="round" />
-        </svg>
-        New Issue
-      </button>
+      {#if canEditIssue(role)}
+        <div class="h-4 w-px bg-border mx-0.5"></div>
+        <button
+          onclick={() => (showNewIssue = true)}
+          class="flex items-center gap-1.5 rounded-md bg-primary px-2.5 py-1.5 text-xs font-medium text-primary-foreground hover:bg-primary/90 transition-colors"
+        >
+          <svg viewBox="0 0 16 16" fill="none" class="h-3 w-3" stroke="currentColor" stroke-width="2.5">
+            <path d="M8 2v12M2 8h12" stroke-linecap="round" />
+          </svg>
+          New Issue
+        </button>
+      {/if}
     </div>
   </div>
 

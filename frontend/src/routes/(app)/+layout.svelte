@@ -7,6 +7,7 @@
   import AppSidebar from '$lib/components/app-sidebar.svelte';
   import NotificationBell from '$lib/components/notifications/NotificationBell.svelte';
   import * as Sidebar from '$lib/components/ui/sidebar/index.js';
+  import { roleStore } from '$lib/stores/role';
 
   let { children } = $props();
 
@@ -15,7 +16,7 @@
   onMount(async () => {
     if ($authStore.isAuthenticated && orgId) {
       try {
-        await projectStore.loadProjects(orgId);
+        await Promise.all([projectStore.loadProjects(orgId), roleStore.load()]);
       } catch {}
       connectSse();
     }

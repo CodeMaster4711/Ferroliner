@@ -147,14 +147,15 @@ pub async fn initialize_database(
         role_id
     };
 
-    // 4b. Create Editor role
-    if Role::find()
+    // 4b. Create/sync Editor role
+    let editor_role_id = if let Some(role) = Role::find()
         .filter(role::Column::Name.eq("Editor"))
         .filter(role::Column::OrganizationId.eq(default_org_id))
         .one(db)
         .await?
-        .is_none()
     {
+        role.id
+    } else {
         tracing::info!("Creating Editor role...");
         let role_id = Uuid::new_v4();
         let now = chrono::Utc::now().naive_utc();
@@ -167,18 +168,35 @@ pub async fn initialize_database(
             created_at: ActiveValue::Set(now),
         };
         Role::insert(new_role).exec_without_returning(db).await?;
+        role_id
+    };
 
-        let editor_perms = [
-            "organization.view",
-            "members.view",
-            "users.view",
-            "users.create",
-            "users.update",
-        ];
-        for perm_name in editor_perms {
-            if let Some(perm_id) = permission_map.get(perm_name) {
+    let editor_perms = [
+        "organization.view",
+        "members.view",
+        "users.view",
+        "projects.view",
+        "projects.create",
+        "projects.update",
+        "issues.view",
+        "issues.create",
+        "issues.update",
+        "issues.delete",
+        "issues.comment",
+        "notifications.view",
+        "attachments.manage",
+    ];
+    for perm_name in editor_perms {
+        if let Some(perm_id) = permission_map.get(perm_name) {
+            let exists = RolePermission::find()
+                .filter(role_permission::Column::RoleId.eq(editor_role_id))
+                .filter(role_permission::Column::PermissionId.eq(*perm_id))
+                .one(db)
+                .await?
+                .is_some();
+            if !exists {
                 let role_perm = role_permission::ActiveModel {
-                    role_id: ActiveValue::Set(role_id),
+                    role_id: ActiveValue::Set(editor_role_id),
                     permission_id: ActiveValue::Set(*perm_id),
                 };
                 RolePermission::insert(role_perm)
@@ -188,14 +206,15 @@ pub async fn initialize_database(
         }
     }
 
-    // 4c. Create Viewer role
-    if Role::find()
+    // 4c. Create/sync Viewer role
+    let viewer_role_id = if let Some(role) = Role::find()
         .filter(role::Column::Name.eq("Viewer"))
         .filter(role::Column::OrganizationId.eq(default_org_id))
         .one(db)
         .await?
-        .is_none()
     {
+        role.id
+    } else {
         tracing::info!("Creating Viewer role...");
         let role_id = Uuid::new_v4();
         let now = chrono::Utc::now().naive_utc();
@@ -208,12 +227,29 @@ pub async fn initialize_database(
             created_at: ActiveValue::Set(now),
         };
         Role::insert(new_role).exec_without_returning(db).await?;
+        role_id
+    };
 
-        let viewer_perms = ["organization.view", "members.view", "users.view"];
-        for perm_name in viewer_perms {
-            if let Some(perm_id) = permission_map.get(perm_name) {
+    let viewer_perms = [
+        "organization.view",
+        "members.view",
+        "users.view",
+        "projects.view",
+        "issues.view",
+        "issues.comment",
+        "notifications.view",
+    ];
+    for perm_name in viewer_perms {
+        if let Some(perm_id) = permission_map.get(perm_name) {
+            let exists = RolePermission::find()
+                .filter(role_permission::Column::RoleId.eq(viewer_role_id))
+                .filter(role_permission::Column::PermissionId.eq(*perm_id))
+                .one(db)
+                .await?
+                .is_some();
+            if !exists {
                 let role_perm = role_permission::ActiveModel {
-                    role_id: ActiveValue::Set(role_id),
+                    role_id: ActiveValue::Set(viewer_role_id),
                     permission_id: ActiveValue::Set(*perm_id),
                 };
                 RolePermission::insert(role_perm)

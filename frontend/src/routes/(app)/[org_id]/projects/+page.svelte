@@ -3,11 +3,10 @@
   import { goto } from '$app/navigation';
   import { projectStore } from '$lib/stores/projects';
   import { ProjectsService } from '$lib/services/projects';
-  import { OrganizationService } from '$lib/services/organization';
-  import { authStore } from '$lib/stores/auth';
-  import { onMount } from 'svelte';
+  import { roleStore, canCreateProject, canDeleteProject } from '$lib/stores/role';
 
   const orgId = $derived($page.params.org_id ?? '');
+  const role = $derived($roleStore.role);
 
   let showCreate = $state(false);
   let name = $state('');
@@ -15,17 +14,7 @@
   let color = $state('#6366f1');
   let creating = $state(false);
   let error = $state('');
-  let isAdmin = $state(false);
   let confirmDeleteId = $state<string | null>(null);
-
-  onMount(async () => {
-    try {
-      const me = await OrganizationService.getMe();
-      isAdmin = me.role_name.toLowerCase().includes('admin');
-    } catch {
-      isAdmin = false;
-    }
-  });
 
   async function create() {
     if (!name.trim() || !identifier.trim()) return;
@@ -61,18 +50,20 @@
 <div class="flex min-h-0 flex-1 flex-col overflow-hidden">
   <div class="flex h-11 flex-shrink-0 items-center justify-between border-b border-border px-4">
     <h1 class="text-sm font-semibold text-foreground">Projects</h1>
-    <button
-      onclick={() => (showCreate = !showCreate)}
-      class="flex items-center gap-1.5 rounded-md bg-primary px-2.5 py-1.5 text-xs font-medium text-primary-foreground hover:bg-primary/90"
-    >
-      <svg viewBox="0 0 16 16" fill="none" class="h-3 w-3" stroke="currentColor" stroke-width="2.5">
-        <path d="M8 2v12M2 8h12" stroke-linecap="round" />
-      </svg>
-      New Project
-    </button>
+    {#if canCreateProject(role)}
+      <button
+        onclick={() => (showCreate = !showCreate)}
+        class="flex items-center gap-1.5 rounded-md bg-primary px-2.5 py-1.5 text-xs font-medium text-primary-foreground hover:bg-primary/90"
+      >
+        <svg viewBox="0 0 16 16" fill="none" class="h-3 w-3" stroke="currentColor" stroke-width="2.5">
+          <path d="M8 2v12M2 8h12" stroke-linecap="round" />
+        </svg>
+        New Project
+      </button>
+    {/if}
   </div>
 
-  {#if showCreate}
+  {#if showCreate && canCreateProject(role)}
     <div class="border-b border-border bg-muted/20 px-4 py-3">
       <div class="flex flex-col gap-2 max-w-md">
         {#if error}
@@ -130,9 +121,9 @@
               </div>
             </a>
 
-            {#if isAdmin}
+            {#if canDeleteProject(role)}
               {#if confirmDeleteId === project.id}
-                <div class="flex items-center gap-2 opacity-100">
+                <div class="flex items-center gap-2">
                   <span class="text-xs text-muted-foreground">Delete?</span>
                   <button
                     onclick={() => deleteProject(project.id)}

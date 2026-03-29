@@ -8,7 +8,10 @@ use uuid::Uuid;
 
 use crate::{
     attachment_service,
-    auth::middleware::AuthenticatedUser,
+    auth::{
+        middleware::AuthenticatedUser,
+        rbac::{CanManageIssues, CanViewIssues},
+    },
     comment_service,
     issue_service::{IssueError, IssueFilter, IssuePatch, IssueService, IssueWithRelations},
     AppState,
@@ -204,7 +207,7 @@ async fn get_project_identifier(state: &AppState, project_id: Uuid) -> Result<St
 }
 
 async fn list_issues(
-    AuthenticatedUser(_claims): AuthenticatedUser,
+    CanViewIssues(_claims): CanViewIssues,
     State(state): State<AppState>,
     Path((_org_id, project_id)): Path<(Uuid, Uuid)>,
     Query(q): Query<ListIssuesQuery>,
@@ -229,7 +232,7 @@ async fn list_issues(
 }
 
 async fn create_issue(
-    AuthenticatedUser(claims): AuthenticatedUser,
+    CanManageIssues(claims): CanManageIssues,
     State(state): State<AppState>,
     Path((_org_id, project_id)): Path<(Uuid, Uuid)>,
     Json(req): Json<CreateIssueRequest>,
@@ -253,7 +256,7 @@ async fn create_issue(
 }
 
 async fn get_issue(
-    AuthenticatedUser(_claims): AuthenticatedUser,
+    CanViewIssues(_claims): CanViewIssues,
     State(state): State<AppState>,
     Path((_org_id, project_id, issue_id)): Path<(Uuid, Uuid, Uuid)>,
 ) -> Result<Json<IssueResponse>, StatusCode> {
@@ -264,7 +267,7 @@ async fn get_issue(
 }
 
 async fn update_issue(
-    AuthenticatedUser(_claims): AuthenticatedUser,
+    CanManageIssues(_claims): CanManageIssues,
     State(state): State<AppState>,
     Path((_org_id, project_id, issue_id)): Path<(Uuid, Uuid, Uuid)>,
     Json(req): Json<UpdateIssueRequest>,
@@ -287,7 +290,7 @@ async fn update_issue(
 }
 
 async fn delete_issue(
-    AuthenticatedUser(_claims): AuthenticatedUser,
+    CanManageIssues(_claims): CanManageIssues,
     State(state): State<AppState>,
     Path((_org_id, _project_id, issue_id)): Path<(Uuid, Uuid, Uuid)>,
 ) -> Result<StatusCode, StatusCode> {
@@ -297,7 +300,7 @@ async fn delete_issue(
 }
 
 async fn list_relationships(
-    AuthenticatedUser(_claims): AuthenticatedUser,
+    CanViewIssues(_claims): CanViewIssues,
     State(state): State<AppState>,
     Path((_org_id, _project_id, issue_id)): Path<(Uuid, Uuid, Uuid)>,
 ) -> Result<Json<Vec<RelationshipResponse>>, StatusCode> {
@@ -319,7 +322,7 @@ async fn list_relationships(
 }
 
 async fn add_relationship(
-    AuthenticatedUser(_claims): AuthenticatedUser,
+    CanManageIssues(_claims): CanManageIssues,
     State(state): State<AppState>,
     Path((_org_id, _project_id, issue_id)): Path<(Uuid, Uuid, Uuid)>,
     Json(req): Json<AddRelationshipRequest>,
@@ -338,7 +341,7 @@ async fn add_relationship(
 }
 
 async fn remove_relationship(
-    AuthenticatedUser(_claims): AuthenticatedUser,
+    CanManageIssues(_claims): CanManageIssues,
     State(state): State<AppState>,
     Path((_org_id, _project_id, _issue_id, rel_id)): Path<(Uuid, Uuid, Uuid, Uuid)>,
 ) -> Result<StatusCode, StatusCode> {
@@ -353,7 +356,7 @@ pub struct CommentBody {
 }
 
 async fn list_comments(
-    AuthenticatedUser(_claims): AuthenticatedUser,
+    CanViewIssues(_claims): CanViewIssues,
     State(state): State<AppState>,
     Path((_org_id, _project_id, issue_id)): Path<(Uuid, Uuid, Uuid)>,
 ) -> Result<Json<Vec<entity::comment::Model>>, StatusCode> {
@@ -364,7 +367,7 @@ async fn list_comments(
 }
 
 async fn create_comment(
-    AuthenticatedUser(claims): AuthenticatedUser,
+    CanManageIssues(claims): CanManageIssues,
     State(state): State<AppState>,
     Path((_org_id, _project_id, issue_id)): Path<(Uuid, Uuid, Uuid)>,
     Json(req): Json<CommentBody>,
@@ -376,7 +379,7 @@ async fn create_comment(
 }
 
 async fn update_comment(
-    AuthenticatedUser(claims): AuthenticatedUser,
+    CanManageIssues(claims): CanManageIssues,
     State(state): State<AppState>,
     Path((_org_id, _project_id, _issue_id, comment_id)): Path<(Uuid, Uuid, Uuid, Uuid)>,
     Json(req): Json<CommentBody>,
@@ -388,7 +391,7 @@ async fn update_comment(
 }
 
 async fn delete_comment(
-    AuthenticatedUser(claims): AuthenticatedUser,
+    CanManageIssues(claims): CanManageIssues,
     State(state): State<AppState>,
     Path((_org_id, _project_id, _issue_id, comment_id)): Path<(Uuid, Uuid, Uuid, Uuid)>,
 ) -> StatusCode {
@@ -399,7 +402,7 @@ async fn delete_comment(
 }
 
 async fn add_reaction(
-    AuthenticatedUser(claims): AuthenticatedUser,
+    CanManageIssues(claims): CanManageIssues,
     State(state): State<AppState>,
     Path((_org_id, _project_id, _issue_id, comment_id, emoji)): Path<(Uuid, Uuid, Uuid, Uuid, String)>,
 ) -> StatusCode {
@@ -410,7 +413,7 @@ async fn add_reaction(
 }
 
 async fn remove_reaction(
-    AuthenticatedUser(claims): AuthenticatedUser,
+    CanManageIssues(claims): CanManageIssues,
     State(state): State<AppState>,
     Path((_org_id, _project_id, _issue_id, comment_id, emoji)): Path<(Uuid, Uuid, Uuid, Uuid, String)>,
 ) -> StatusCode {
@@ -421,7 +424,7 @@ async fn remove_reaction(
 }
 
 async fn list_activity(
-    AuthenticatedUser(_claims): AuthenticatedUser,
+    CanViewIssues(_claims): CanViewIssues,
     State(state): State<AppState>,
     Path((_org_id, _project_id, issue_id)): Path<(Uuid, Uuid, Uuid)>,
 ) -> Result<Json<Vec<entity::issue_activity::Model>>, StatusCode> {
@@ -445,7 +448,7 @@ pub struct InitiateUploadResponse {
 }
 
 async fn list_attachments(
-    AuthenticatedUser(_claims): AuthenticatedUser,
+    CanViewIssues(_claims): CanViewIssues,
     State(state): State<AppState>,
     Path((_org_id, _project_id, issue_id)): Path<(Uuid, Uuid, Uuid)>,
 ) -> Result<Json<Vec<entity::attachment::Model>>, StatusCode> {
@@ -456,7 +459,7 @@ async fn list_attachments(
 }
 
 async fn initiate_upload(
-    AuthenticatedUser(claims): AuthenticatedUser,
+    CanManageIssues(claims): CanManageIssues,
     State(state): State<AppState>,
     Path((_org_id, _project_id, issue_id)): Path<(Uuid, Uuid, Uuid)>,
     Json(req): Json<InitiateUploadRequest>,
@@ -480,7 +483,7 @@ async fn initiate_upload(
 }
 
 async fn delete_attachment(
-    AuthenticatedUser(_claims): AuthenticatedUser,
+    CanManageIssues(_claims): CanManageIssues,
     State(state): State<AppState>,
     Path((_org_id, _project_id, _issue_id, attachment_id)): Path<(Uuid, Uuid, Uuid, Uuid)>,
 ) -> StatusCode {

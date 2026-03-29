@@ -2,9 +2,12 @@
   import { page } from '$app/stores';
   import { ProjectsService } from '$lib/services/projects';
   import { OrganizationService } from '$lib/services/organization';
+  import { roleStore, canManageUsers } from '$lib/stores/role';
   import type { IssueStatus, Label, Member } from '$lib/types';
   import type { OrgUserResponse } from '$lib/services/organization';
   import { onMount } from 'svelte';
+
+  const role = $derived($roleStore.role);
 
   const orgId = $derived($page.params.org_id ?? '');
   const projectId = $derived($page.params.project_id ?? '');
@@ -101,7 +104,7 @@
   <div class="flex h-11 flex-shrink-0 items-center gap-4 border-b border-border px-4">
     <span class="text-sm font-semibold text-foreground">Project Settings</span>
     <div class="flex gap-1">
-      {#each ['statuses', 'labels', 'members'] as t}
+      {#each (['statuses', 'labels', ...(canManageUsers(role) ? ['members'] : [])] as const) as t}
         <button
           onclick={() => (tab = t as typeof tab)}
           class="rounded px-2.5 py-1 text-xs transition-colors

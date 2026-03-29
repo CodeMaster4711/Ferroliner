@@ -22,6 +22,12 @@ pub struct CanManageUsers(pub Claims);
 pub struct CanManageOrganization(pub Claims);
 pub struct CanViewMembers(pub Claims);
 pub struct CanManageMembers(pub Claims);
+pub struct CanViewProjects(pub Claims);
+pub struct CanCreateProject(pub Claims);
+pub struct CanUpdateProject(pub Claims);
+pub struct CanDeleteProject(pub Claims);
+pub struct CanViewIssues(pub Claims);
+pub struct CanManageIssues(pub Claims);
 
 async fn extract_claims(parts: &mut Parts, state: &AppState) -> Result<Claims, StatusCode> {
     let token = parts
@@ -116,3 +122,9 @@ impl_extractor!(CanManageUsers, "users", "create");
 impl_extractor!(CanManageOrganization, "organization", "update");
 impl_extractor!(CanViewMembers, "members", "view");
 impl_extractor!(CanManageMembers, "members", "create");
+impl_extractor!(CanViewProjects, "projects", "view");
+impl_extractor!(CanCreateProject, "projects", "create");
+impl_extractor!(CanUpdateProject, "projects", "update");
+impl_extractor!(CanDeleteProject, "projects", "delete");
+impl_extractor!(CanViewIssues, "issues", "view");
+impl_extractor!(CanManageIssues, "issues", "create");
