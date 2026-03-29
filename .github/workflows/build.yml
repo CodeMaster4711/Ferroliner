@@ -6,20 +6,16 @@ on:
   workflow_dispatch:
 
 jobs:
-  build:
+  check-release:
     runs-on: ubuntu-latest
-    permissions:
-      contents: read
-      packages: write
+    outputs:
+      release_merged: ${{ steps.check.outputs.release_merged }}
     steps:
-      - uses: actions/checkout@v4
-        with:
-          ref: main
-
       - name: Check for release-please PR merged today
-        id: check-release
+        id: check
         run: |
           MERGED=$(gh pr list \
+            --repo ${{ github.repository }} \
             --state merged \
             --label "autorelease: tagged" \
             --base main \
@@ -29,45 +25,90 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Skip if no release merged
-        if: ${{ steps.check-release.outputs.release_merged == '0' }}
-        run: |
-          echo "No release-please PR merged in the last 24 hours, skipping build."
-          exit 0
+  build-amd64:
+    needs: check-release
+    if: ${{ needs.check-release.outputs.release_merged != '0' }}
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - uses: actions/checkout@v4
 
       - name: Set up Docker Buildx
-        if: ${{ steps.check-release.outputs.release_merged != '0' }}
         uses: docker/setup-buildx-action@v3
 
       - name: Log in to GitHub Container Registry
-        if: ${{ steps.check-release.outputs.release_merged != '0' }}
         uses: docker/login-action@v3
         with:
           registry: ghcr.io
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Extract metadata
-        if: ${{ steps.check-release.outputs.release_merged != '0' }}
-        id: meta
-        uses: docker/metadata-action@v5
-        with:
-          images: ghcr.io/${{ github.repository }}
-          tags: |
-            type=raw,value=latest
-            type=sha
-
-      - name: Build and push
-        if: ${{ steps.check-release.outputs.release_merged != '0' }}
+      - name: Build and push amd64
         uses: docker/build-push-action@v6
         with:
           context: .
           push: true
-          platforms: linux/amd64,linux/arm64
-          tags: ${{ steps.meta.outputs.tags }}
-          labels: ${{ steps.meta.outputs.labels }}
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
+          platforms: linux/amd64
+          tags: ghcr.io/${{ github.repository }}:sha-${{ github.sha }}-amd64
+          cache-from: type=gha,scope=amd64
+          cache-to: type=gha,mode=max,scope=amd64
           build-args: |
             JWT_SECRET=change-me-in-production
             BACKEND_URL=http://localhost:8000
+
+  build-arm64:
+    needs: check-release
+    if: ${{ needs.check-release.outputs.release_merged != '0' }}
+    runs-on: ubuntu-24.04-arm
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build and push arm64
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          push: true
+          platforms: linux/arm64
+          tags: ghcr.io/${{ github.repository }}:sha-${{ github.sha }}-arm64
+          cache-from: type=gha,scope=arm64
+          cache-to: type=gha,mode=max,scope=arm64
+          build-args: |
+            JWT_SECRET=change-me-in-production
+            BACKEND_URL=http://localhost:8000
+
+  merge-manifest:
+    needs: [build-amd64, build-arm64]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - name: Log in to GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Create and push multi-platform manifest
+        run: |
+          docker buildx imagetools create \
+            --tag ghcr.io/${{ github.repository }}:latest \
+            --tag ghcr.io/${{ github.repository }}:sha-${{ github.sha }} \
+            ghcr.io/${{ github.repository }}:sha-${{ github.sha }}-amd64 \
+            ghcr.io/${{ github.repository }}:sha-${{ github.sha }}-arm64
