@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.3.2](https://github.com/CodeMaster4711/Ferroliner/compare/v1.3.1...v1.3.2) (2026-03-29)
+
+
+### Bug Fixes
+
+* create /data directory before starting backend in entrypoint ([6a79f27](https://github.com/CodeMaster4711/Ferroliner/commit/6a79f27bd021a6785cb49960d56e2a5f870ea523))
+
 ## [1.3.1](https://github.com/CodeMaster4711/Ferroliner/compare/v1.3.0...v1.3.1) (2026-03-29)
 
 
