@@ -6,6 +6,7 @@ use axum::http::{HeaderValue, Request, Response};
 use axum::Router;
 use tower_governor::{governor::GovernorConfigBuilder, GovernorLayer};
 use tower_http::cors::CorsLayer;
+use tower_http::services::{ServeDir, ServeFile};
 use tower_http::trace::TraceLayer;
 use tracing::{info_span, Span};
 
@@ -69,8 +70,17 @@ pub fn create_router() -> Router<AppState> {
         .merge(issues::routes())
         .merge(notifications::routes());
 
-    Router::new()
-        .nest("/api", api_router)
+    let mut router = Router::new().nest("/api", api_router);
+
+    if let Ok(static_dir) = std::env::var("STATIC_DIR") {
+        let index = format!("{}/index.html", static_dir);
+        router = router.fallback_service(
+            ServeDir::new(&static_dir).not_found_service(ServeFile::new(index)),
+        );
+        tracing::info!(static_dir = %static_dir, "serving static frontend files");
+    }
+
+    router
         .layer(GovernorLayer::new(governor_config))
         .layer(
             TraceLayer::new_for_http()

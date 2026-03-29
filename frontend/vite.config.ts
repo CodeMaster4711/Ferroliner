@@ -8,13 +8,14 @@ export default defineConfig({
   server: {
     port: 1420,
     strictPort: true,
+    host: '0.0.0.0',
     hmr: {
       protocol: 'ws',
       port: 1420
     },
     proxy: {
       '/api': {
-        target: 'http://localhost:8000',
+        target: process.env.BACKEND_URL ?? 'http://localhost:8000',
         changeOrigin: true,
       }
     }
