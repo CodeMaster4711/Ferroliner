@@ -16,6 +16,15 @@
       .catch(() => {});
   });
 
+  function parsePrMeta(to: string | null): { url: string; title: string; number: number } | null {
+    if (!to) return null;
+    try {
+      return JSON.parse(to);
+    } catch {
+      return null;
+    }
+  }
+
   function label(kind: string, from: string | null, to: string | null): string {
     switch (kind) {
       case 'status_changed': return `changed status from ${from ?? '?'} to ${to ?? '?'}`;
@@ -24,6 +33,19 @@
       case 'title_changed': return `changed title`;
       case 'description_changed': return `updated description`;
       default: return kind.replace(/_/g, ' ');
+    }
+  }
+
+  function isGitPrKind(kind: string): boolean {
+    return ['git.pr_opened', 'git.pr_merged', 'git.pr_closed', 'git.pr_linked'].includes(kind);
+  }
+
+  function gitPrLabel(kind: string): string {
+    switch (kind) {
+      case 'git.pr_opened': return 'opened PR';
+      case 'git.pr_merged': return 'merged PR';
+      case 'git.pr_closed': return 'closed PR';
+      default: return 'linked PR';
     }
   }
 </script>
@@ -36,7 +58,19 @@
         {event.actor_id?.slice(0, 1).toUpperCase() ?? '?'}
       </span>
       <span>
-        {label(event.kind, event.from_value, event.to_value)}
+        {#if isGitPrKind(event.kind)}
+          {@const pr = parsePrMeta(event.to_value)}
+          {gitPrLabel(event.kind)}
+          {#if pr}
+            <a href={pr.url} target="_blank" rel="noopener noreferrer" class="underline">
+              #{pr.number}: {pr.title}
+            </a>
+          {/if}
+        {:else if event.kind === 'git.branch_linked'}
+          linked branch <code class="rounded bg-muted px-1">{event.to_value}</code>
+        {:else}
+          {label(event.kind, event.from_value, event.to_value)}
+        {/if}
         <span class="ml-1 text-muted-foreground/60">{new Date(event.created_at).toLocaleString()}</span>
       </span>
     </div>

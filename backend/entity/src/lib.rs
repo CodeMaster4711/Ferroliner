@@ -1,6 +1,12 @@
 pub mod entities;
 
 pub use entities::attachment;
+pub use entities::git_integration;
+pub use entities::git_pull_request;
+pub use entities::git_repository;
+pub use entities::issue_git_link;
+pub use entities::oauth_state;
+pub use entities::webhook_job;
 pub use entities::comment;
 pub use entities::comment_reaction;
 pub use entities::invalid_jwt;
@@ -24,6 +30,12 @@ pub use entities::user;
 pub use entities::user_organization;
 
 pub use entities::attachment::Entity as Attachment;
+pub use entities::git_integration::Entity as GitIntegration;
+pub use entities::git_pull_request::Entity as GitPullRequest;
+pub use entities::git_repository::Entity as GitRepository;
+pub use entities::issue_git_link::Entity as IssueGitLink;
+pub use entities::oauth_state::Entity as OauthState;
+pub use entities::webhook_job::Entity as WebhookJob;
 pub use entities::comment::Entity as Comment;
 pub use entities::comment_reaction::Entity as CommentReaction;
 pub use entities::invalid_jwt::Entity as InvalidJwt;

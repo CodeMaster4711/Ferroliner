@@ -10,6 +10,7 @@
   import IssuePriorityIcon from '$lib/components/issue-board/IssuePriorityIcon.svelte';
   import CommentList from '$lib/components/issue-detail/CommentList.svelte';
   import ActivityFeed from '$lib/components/issue-detail/ActivityFeed.svelte';
+  import GitPrList from '$lib/components/git/GitPrList.svelte';
   import { authStore } from '$lib/stores/auth';
   import type { IssueStatus } from '$lib/types';
   import { PRIORITY_LABELS } from '$lib/types';
@@ -166,6 +167,10 @@
           </div>
         {/if}
       </div>
+      <div class="mb-6 border-t border-border pt-6">
+        <GitPrList {orgId} {projectId} {issueId} />
+      </div>
+
       <div class="mb-6 border-t border-border pt-6">
         <CommentList
           {orgId}

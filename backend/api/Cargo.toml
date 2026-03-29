@@ -51,6 +51,10 @@ base64 = { workspace = true }
 # HTTP client
 reqwest = { workspace = true }
 
+# Pattern matching / encoding
+regex = { workspace = true }
+urlencoding = { workspace = true }
+
 # Cryptography extras
 hmac = { workspace = true }
 hex = { workspace = true }

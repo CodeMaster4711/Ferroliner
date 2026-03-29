@@ -28,6 +28,8 @@ pub struct CanUpdateProject(pub Claims);
 pub struct CanDeleteProject(pub Claims);
 pub struct CanViewIssues(pub Claims);
 pub struct CanManageIssues(pub Claims);
+pub struct CanConnectGit(pub Claims);
+pub struct CanDisconnectGit(pub Claims);
 
 async fn extract_claims(parts: &mut Parts, state: &AppState) -> Result<Claims, StatusCode> {
     let token = parts
@@ -128,3 +130,5 @@ impl_extractor!(CanUpdateProject, "projects", "update");
 impl_extractor!(CanDeleteProject, "projects", "delete");
 impl_extractor!(CanViewIssues, "issues", "view");
 impl_extractor!(CanManageIssues, "issues", "create");
+impl_extractor!(CanConnectGit, "git", "connect");
+impl_extractor!(CanDisconnectGit, "git", "disconnect");

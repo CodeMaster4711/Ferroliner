@@ -10,6 +10,7 @@ use tower_http::services::{ServeDir, ServeFile};
 use tower_http::trace::TraceLayer;
 use tracing::{info_span, Span};
 
+pub mod git;
 pub mod issues;
 pub mod notifications;
 pub mod organizations;
@@ -63,14 +64,26 @@ pub fn create_router() -> Router<AppState> {
         .allow_headers(vec![AUTHORIZATION, ACCEPT, CONTENT_TYPE])
         .allow_credentials(true);
 
+    let webhook_governor_config = GovernorConfigBuilder::default()
+        .per_second(10)
+        .burst_size(50)
+        .finish()
+        .expect("invalid webhook rate limit configuration");
+
     let api_router = Router::new()
         .merge(users::users_routes())
         .merge(organizations::routes())
         .merge(projects::routes())
         .merge(issues::routes())
-        .merge(notifications::routes());
+        .merge(notifications::routes())
+        .merge(git::jwt_routes());
 
-    let mut router = Router::new().nest("/api", api_router);
+    let webhook_router = git::webhook_routes()
+        .layer(GovernorLayer::new(webhook_governor_config));
+
+    let mut router = Router::new()
+        .nest("/api", api_router)
+        .merge(webhook_router);
 
     if let Ok(static_dir) = std::env::var("STATIC_DIR") {
         let index = format!("{}/index.html", static_dir);

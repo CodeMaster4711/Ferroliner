@@ -5,12 +5,14 @@ use sea_orm_migration::MigratorTrait;
 use std::net::SocketAddr;
 use std::sync::Arc;
 use tokio::sync::broadcast;
+use uuid;
 
 mod attachment_service;
 mod auth;
 mod auth_service;
 mod comment_service;
 mod db;
+mod git_service;
 mod init;
 mod issue_service;
 mod notification_service;
@@ -18,6 +20,7 @@ mod project_service;
 mod rbac_service;
 mod routes;
 mod sse_service;
+mod webhook_worker;
 
 pub use sse_service::SseEvent;
 
@@ -27,6 +30,8 @@ pub struct AppState {
     pub aes_key: Arc<[u8; 32]>,
     pub sse_tx: broadcast::Sender<SseEvent>,
     pub storage: Arc<dyn object_store::ObjectStore>,
+    pub job_tx: tokio::sync::mpsc::Sender<uuid::Uuid>,
+    pub http_client: reqwest::Client,
 }
 
 #[tokio::main]
@@ -66,13 +71,21 @@ async fn main() {
 
     let storage = build_storage();
     let (sse_tx, _) = broadcast::channel(1024);
+    let (job_tx, job_rx) = tokio::sync::mpsc::channel::<uuid::Uuid>(512);
 
     let state = AppState {
         db_conn,
         aes_key: Arc::new(aes_key),
         sse_tx,
         storage,
+        job_tx,
+        http_client: reqwest::Client::new(),
     };
+
+    let worker_state = state.clone();
+    tokio::spawn(async move {
+        webhook_worker::run(worker_state, job_rx).await;
+    });
 
     let app = routes::create_router().with_state(state);
 

@@ -1,4 +1,10 @@
 pub mod attachment;
+pub mod git_integration;
+pub mod git_pull_request;
+pub mod git_repository;
+pub mod issue_git_link;
+pub mod oauth_state;
+pub mod webhook_job;
 pub mod comment;
 pub mod comment_reaction;
 pub mod invalid_jwt;

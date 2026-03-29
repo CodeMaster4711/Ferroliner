@@ -10,6 +10,7 @@ mod m20250001_000007_create_issue_workflow;
 mod m20250001_000008_create_issues;
 mod m20250001_000009_create_comments_and_activity;
 mod m20250001_000011_create_notifications;
+mod m20250001_000014_create_git_integrations;
 
 pub struct Migrator;
 
@@ -27,6 +28,7 @@ impl MigratorTrait for Migrator {
             Box::new(m20250001_000008_create_issues::Migration),
             Box::new(m20250001_000009_create_comments_and_activity::Migration),
             Box::new(m20250001_000011_create_notifications::Migration),
+            Box::new(m20250001_000014_create_git_integrations::Migration),
         ]
     }
 }
