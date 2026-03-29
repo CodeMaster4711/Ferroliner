@@ -5,7 +5,7 @@ services:
       dockerfile: Dockerfile.dev
     restart: unless-stopped
     environment:
-      DATABASE_URL: sqlite://./data/app.db
+      DATABASE_URL: sqlite:////data/app.db?mode=rwc
       JWT_SECRET: ${JWT_SECRET:-dev-secret-change-in-production}
       RATE_LIMIT_PER_SECOND: ${RATE_LIMIT_PER_SECOND:-1000}
       RATE_LIMIT_BURST: ${RATE_LIMIT_BURST:-2000}

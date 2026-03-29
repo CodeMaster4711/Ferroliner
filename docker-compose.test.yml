@@ -4,7 +4,7 @@ services:
     ports:
       - "3000:3000"
     environment:
-      DATABASE_URL: sqlite:///data/app.db
+      DATABASE_URL: sqlite:////data/app.db?mode=rwc
       JWT_SECRET: test-secret-123
       AES_SECRET: AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=
       FRONTEND_URL: http://localhost:3000
