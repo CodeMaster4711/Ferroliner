@@ -1,6 +1,8 @@
 #!/bin/sh
 set -e
 
+mkdir -p /data
+
 /app/api &
 BACKEND_PID=$!
 
