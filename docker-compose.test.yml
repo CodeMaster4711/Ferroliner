@@ -1,0 +1,19 @@
+services:
+  app:
+    image: ghcr.io/codemaster4711/ferroliner:latest
+    ports:
+      - "3000:3000"
+    environment:
+      DATABASE_URL: sqlite:///data/app.db
+      JWT_SECRET: test-secret-123
+      AES_SECRET: AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=
+      FRONTEND_URL: http://localhost:3000
+      BACKEND_URL: http://localhost:8000
+      PORT: "3000"
+      HOST: "0.0.0.0"
+      RUST_LOG: info
+    volumes:
+      - ferroliner_data:/data
+
+volumes:
+  ferroliner_data:
