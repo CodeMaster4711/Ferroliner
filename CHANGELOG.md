@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.3.1](https://github.com/CodeMaster4711/Ferroliner/compare/v1.3.0...v1.3.1) (2026-03-29)
+
+
+### Bug Fixes
+
+* replace build-push-action with raw docker buildx run steps to enforce lowercase tags ([756b532](https://github.com/CodeMaster4711/Ferroliner/commit/756b532f8a6ed9f5cd3837de6768dc0bfb836512))
+
 ## [1.3.0](https://github.com/CodeMaster4711/Ferroliner/compare/v1.2.0...v1.3.0) (2026-03-29)
 
 
