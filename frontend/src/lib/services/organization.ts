@@ -67,7 +67,11 @@ export class OrganizationService {
 
   static async createUser(data: CreateUserData): Promise<OrgUserResponse> {
     const res = await ApiClient.post('/organization/users', data);
-    if (!res.ok) throw new Error('failed to create user');
+    if (!res.ok) {
+      if (res.status === 409) throw new Error('Username already exists');
+      if (res.status === 422) throw new Error('Invalid password encryption');
+      throw new Error('Failed to create user');
+    }
     return res.json();
   }
 

@@ -1,5 +1,4 @@
 <script lang="ts">
-  import * as Card from '$lib/components/ui/card/index.js';
   import { Field, FieldLabel } from '$lib/components/ui/field/index.js';
   import { Input } from '$lib/components/ui/input/index.js';
   import { Button } from '$lib/components/ui/button/index.js';
@@ -21,7 +20,6 @@
     try {
       const result = await AuthService.login(username, password);
 
-      // Set the auth cookie via server endpoint
       await fetch('/api/set-auth-cookie', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -37,7 +35,6 @@
       }
     } catch (error) {
       if (error instanceof Error && error.message === '2FA_REQUIRED') {
-        // Store credentials temporarily for OTP page
         sessionStorage.setItem('pending_2fa_username', username);
         sessionStorage.setItem('pending_2fa_password', password);
         goto('/otp');
@@ -50,13 +47,27 @@
   }
 </script>
 
-<div class="flex min-h-screen items-center justify-center p-4">
-  <Card.Root class="w-full max-w-md">
-    <Card.Header class="text-center">
-      <Card.Title class="text-2xl">Anmelden</Card.Title>
-      <Card.Description>Melden Sie sich mit Ihrem Benutzernamen an</Card.Description>
-    </Card.Header>
-    <Card.Content>
+<div class="flex min-h-screen">
+  <div class="relative hidden w-1/2 overflow-hidden lg:flex lg:flex-col lg:justify-end lg:p-12">
+    <img
+      src="/Gradient-dark.svg"
+      alt=""
+      class="absolute inset-0 h-full w-full object-cover"
+      aria-hidden="true"
+    />
+    <div class="relative z-10">
+      <h1 class="text-5xl font-bold tracking-tight text-white">Ferroliner</h1>
+      <p class="mt-3 text-base text-white/60">Project management for railway operations</p>
+    </div>
+  </div>
+
+  <div class="flex w-full flex-col items-center justify-center px-8 lg:w-1/2 lg:px-16">
+    <div class="w-full max-w-sm">
+      <div class="mb-8">
+        <h2 class="text-2xl font-semibold tracking-tight">Sign in</h2>
+        <p class="mt-1 text-sm text-muted-foreground">Enter your credentials to continue</p>
+      </div>
+
       <form onsubmit={handleSubmit} class="space-y-4">
         {#if errorMessage}
           <Alert variant="destructive">
@@ -65,12 +76,12 @@
         {/if}
 
         <Field>
-          <FieldLabel for="username">Benutzername</FieldLabel>
+          <FieldLabel for="username">Username</FieldLabel>
           <Input
             id="username"
             type="text"
             bind:value={username}
-            placeholder="benutzername"
+            placeholder="username"
             disabled={isLoading}
             required
             autocomplete="username"
@@ -78,7 +89,7 @@
         </Field>
 
         <Field>
-          <FieldLabel for="password">Passwort</FieldLabel>
+          <FieldLabel for="password">Password</FieldLabel>
           <Input
             id="password"
             type="password"
@@ -92,11 +103,11 @@
 
         <Button type="submit" disabled={isLoading} class="w-full">
           {#if isLoading}
-            <div class="animate-spin rounded-full h-4 w-4 border-b-2 border-current mr-2"></div>
+            <div class="mr-2 h-4 w-4 animate-spin rounded-full border-b-2 border-current"></div>
           {/if}
-          Anmelden
+          Sign in
         </Button>
       </form>
-    </Card.Content>
-  </Card.Root>
+    </div>
+  </div>
 </div>

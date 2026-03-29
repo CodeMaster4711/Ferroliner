@@ -346,6 +346,16 @@ async fn create_user(
         return Err(StatusCode::FORBIDDEN);
     }
 
+    let existing = entity::User::find()
+        .filter(entity::user::Column::Name.eq(&req.username))
+        .one(db)
+        .await
+        .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+
+    if existing.is_some() {
+        return Err(StatusCode::CONFLICT);
+    }
+
     let auth_svc = AuthService::new(state.db_conn.clone());
     let rsa_key = auth_svc
         .get_or_create_rsa_key("main")

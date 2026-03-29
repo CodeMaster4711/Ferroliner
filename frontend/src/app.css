@@ -149,6 +149,17 @@
   body {
     @apply bg-background text-foreground;
   }
+  #gradient-bg {
+    position: fixed;
+    inset: 0;
+    background-image: url('/Gradient-dark.svg');
+    background-size: cover;
+    background-position: center;
+    background-repeat: no-repeat;
+    opacity: 0.06;
+    pointer-events: none;
+    z-index: 0;
+  }
 }
 
 /*

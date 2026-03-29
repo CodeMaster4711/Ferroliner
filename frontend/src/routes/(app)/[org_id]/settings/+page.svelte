@@ -78,8 +78,8 @@
       newPassword = '';
       newForceChange = true;
       showNewUser = false;
-    } catch {
-      userMessage = 'Failed to create user';
+    } catch (e) {
+      userMessage = e instanceof Error ? e.message : 'Failed to create user';
     } finally {
       userCreating = false;
     }
