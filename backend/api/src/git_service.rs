@@ -1,8 +1,9 @@
 use base64::Engine;
 use entity::{
     git_integration, git_pull_request, git_repository, issue, issue_activity, issue_git_link,
-    issue_status, oauth_state, project, webhook_job, GitIntegration, GitPullRequest, GitRepository,
-    Issue, IssueGitLink, IssueStatus, OauthState, Project, WebhookJob,
+    issue_status, oauth_provider_config, oauth_state, project, webhook_job, GitIntegration,
+    GitPullRequest, GitRepository, Issue, IssueGitLink, IssueStatus, OauthProviderConfig,
+    OauthState, Project, WebhookJob,
 };
 use regex::Regex;
 use sea_orm::{
@@ -683,4 +684,104 @@ pub async fn list_issue_prs(
         }
     }
     Ok(prs)
+}
+
+#[derive(Debug, Serialize)]
+pub struct OauthProviderConfigPublic {
+    pub id: Uuid,
+    pub provider: String,
+    pub client_id: String,
+    pub created_at: String,
+    pub updated_at: String,
+}
+
+impl From<oauth_provider_config::Model> for OauthProviderConfigPublic {
+    fn from(m: oauth_provider_config::Model) -> Self {
+        Self {
+            id: m.id,
+            provider: m.provider,
+            client_id: m.client_id,
+            created_at: m.created_at.to_rfc3339(),
+            updated_at: m.updated_at.to_rfc3339(),
+        }
+    }
+}
+
+pub async fn upsert_oauth_provider_config(
+    db: &DatabaseConnection,
+    aes_key: &[u8; 32],
+    provider: String,
+    client_id: String,
+    client_secret: String,
+) -> GitResult<OauthProviderConfigPublic> {
+    let key_b64 = aes_key_b64(aes_key);
+    let client_secret_enc = encrypt_secret(&client_secret, &key_b64)
+        .map_err(|e| GitError::Crypto(e.to_string()))?;
+
+    let now = chrono::Utc::now().fixed_offset();
+
+    let existing = OauthProviderConfig::find()
+        .filter(oauth_provider_config::Column::Provider.eq(&provider))
+        .one(db)
+        .await?;
+
+    let model = if let Some(row) = existing {
+        let mut active: oauth_provider_config::ActiveModel = row.into();
+        active.client_id = Set(client_id);
+        active.client_secret_enc = Set(client_secret_enc);
+        active.updated_at = Set(now);
+        active.update(db).await?
+    } else {
+        oauth_provider_config::ActiveModel {
+            id: Set(Uuid::new_v4()),
+            provider: Set(provider),
+            client_id: Set(client_id),
+            client_secret_enc: Set(client_secret_enc),
+            created_at: Set(now),
+            updated_at: Set(now),
+        }
+        .insert(db)
+        .await?
+    };
+
+    Ok(model.into())
+}
+
+pub async fn list_oauth_provider_configs(
+    db: &DatabaseConnection,
+) -> GitResult<Vec<OauthProviderConfigPublic>> {
+    let rows = OauthProviderConfig::find().all(db).await?;
+    Ok(rows.into_iter().map(Into::into).collect())
+}
+
+pub async fn delete_oauth_provider_config(
+    db: &DatabaseConnection,
+    provider: &str,
+) -> GitResult<()> {
+    let row = OauthProviderConfig::find()
+        .filter(oauth_provider_config::Column::Provider.eq(provider))
+        .one(db)
+        .await?
+        .ok_or(GitError::NotFound)?;
+    let active: oauth_provider_config::ActiveModel = row.into();
+    active.delete(db).await?;
+    Ok(())
+}
+
+pub async fn get_oauth_provider_credentials(
+    db: &DatabaseConnection,
+    aes_key: &[u8; 32],
+    provider: &str,
+) -> GitResult<(String, String)> {
+    let row = OauthProviderConfig::find()
+        .filter(oauth_provider_config::Column::Provider.eq(provider))
+        .one(db)
+        .await?
+        .ok_or(GitError::NotFound)?;
+
+    let key_b64 = aes_key_b64(aes_key);
+    let client_secret = decrypt_secret(&row.client_secret_enc, &key_b64)
+        .map_err(|e| GitError::Crypto(e.to_string()))?;
+
+    Ok((row.client_id, client_secret))
 }

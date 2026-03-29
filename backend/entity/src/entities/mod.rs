@@ -3,6 +3,7 @@ pub mod git_integration;
 pub mod git_pull_request;
 pub mod git_repository;
 pub mod issue_git_link;
+pub mod oauth_provider_config;
 pub mod oauth_state;
 pub mod webhook_job;
 pub mod comment;

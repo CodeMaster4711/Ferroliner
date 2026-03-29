@@ -12,7 +12,7 @@ use sha2::Sha256;
 use uuid::Uuid;
 
 use crate::{
-    auth::rbac::{CanConnectGit, CanDisconnectGit, CanViewIssues},
+    auth::rbac::{CanConnectGit, CanDisconnectGit, CanManageOrganization, CanViewIssues},
     git_service,
     AppState,
 };
@@ -46,6 +46,14 @@ pub fn jwt_routes() -> Router<AppState> {
         .route(
             "/organizations/{org_id}/projects/{project_id}/issues/{issue_id}/git/prs",
             axum::routing::get(list_issue_prs),
+        )
+        .route(
+            "/git/oauth-providers",
+            axum::routing::get(list_oauth_providers).post(upsert_oauth_provider),
+        )
+        .route(
+            "/git/oauth-providers/{provider}",
+            axum::routing::delete(delete_oauth_provider),
         )
 }
 
@@ -134,7 +142,14 @@ async fn oauth_authorize(
     Query(q): Query<OauthAuthorizeQuery>,
     State(state): State<AppState>,
 ) -> Result<Json<OauthAuthorizeResponse>, StatusCode> {
-    let client_id = std::env::var("OAUTH_CLIENT_ID").unwrap_or_default();
+    let (client_id, _) =
+        git_service::get_oauth_provider_credentials(&state.db_conn, &state.aes_key, &q.provider)
+            .await
+            .map_err(|e| match e {
+                git_service::GitError::NotFound => StatusCode::UNPROCESSABLE_ENTITY,
+                _ => StatusCode::INTERNAL_SERVER_ERROR,
+            })?;
+
     let frontend_url =
         std::env::var("FRONTEND_URL").unwrap_or_else(|_| "http://localhost:1420".to_string());
     let redirect_uri = format!(
@@ -197,8 +212,14 @@ async fn oauth_callback(
         return Err(StatusCode::UNAUTHORIZED);
     }
 
-    let client_id = std::env::var("OAUTH_CLIENT_ID").unwrap_or_default();
-    let client_secret = std::env::var("OAUTH_CLIENT_SECRET").unwrap_or_default();
+    let (client_id, client_secret) = git_service::get_oauth_provider_credentials(
+        &state.db_conn,
+        &state.aes_key,
+        &oauth_state.provider,
+    )
+    .await
+    .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+
     let frontend_url =
         std::env::var("FRONTEND_URL").unwrap_or_else(|_| "http://localhost:1420".to_string());
     let redirect_uri = format!(
@@ -378,7 +399,7 @@ async fn forgejo_webhook(
     headers: HeaderMap,
     body: Bytes,
 ) -> StatusCode {
-    use entity::{GitIntegration};
+    use entity::GitIntegration;
     use sea_orm::EntityTrait;
 
     let integration = match GitIntegration::find_by_id(integration_id)
@@ -455,4 +476,50 @@ async fn forgejo_webhook(
     }
 
     StatusCode::OK
+}
+
+async fn list_oauth_providers(
+    _auth: CanManageOrganization,
+    State(state): State<AppState>,
+) -> Result<Json<Vec<git_service::OauthProviderConfigPublic>>, StatusCode> {
+    git_service::list_oauth_provider_configs(&state.db_conn)
+        .await
+        .map(Json)
+        .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)
+}
+
+#[derive(Deserialize)]
+struct UpsertOauthProviderRequest {
+    provider: String,
+    client_id: String,
+    client_secret: String,
+}
+
+async fn upsert_oauth_provider(
+    _auth: CanManageOrganization,
+    State(state): State<AppState>,
+    Json(body): Json<UpsertOauthProviderRequest>,
+) -> Result<Json<git_service::OauthProviderConfigPublic>, StatusCode> {
+    git_service::upsert_oauth_provider_config(
+        &state.db_conn,
+        &state.aes_key,
+        body.provider,
+        body.client_id,
+        body.client_secret,
+    )
+    .await
+    .map(Json)
+    .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)
+}
+
+async fn delete_oauth_provider(
+    _auth: CanManageOrganization,
+    Path(provider): Path<String>,
+    State(state): State<AppState>,
+) -> StatusCode {
+    match git_service::delete_oauth_provider_config(&state.db_conn, &provider).await {
+        Ok(()) => StatusCode::NO_CONTENT,
+        Err(git_service::GitError::NotFound) => StatusCode::NOT_FOUND,
+        Err(_) => StatusCode::INTERNAL_SERVER_ERROR,
+    }
 }

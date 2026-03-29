@@ -36,6 +36,14 @@ export interface GitPullRequest {
   updated_at: string;
 }
 
+export interface OauthProviderConfig {
+  id: string;
+  provider: 'gitlab' | 'forgejo';
+  client_id: string;
+  created_at: string;
+  updated_at: string;
+}
+
 export class GitService {
   static async listIntegrations(orgId: string): Promise<GitIntegration[]> {
     const res = await ApiClient.get(`/organizations/${orgId}/git/integrations`);
@@ -99,6 +107,31 @@ export class GitService {
     );
     if (!res.ok) throw new Error('failed to link repository');
     return res.json();
+  }
+
+  static async listOauthProviders(): Promise<OauthProviderConfig[]> {
+    const res = await ApiClient.get('/git/oauth-providers');
+    if (!res.ok) throw new Error('failed to fetch oauth providers');
+    return res.json();
+  }
+
+  static async upsertOauthProvider(
+    provider: string,
+    clientId: string,
+    clientSecret: string
+  ): Promise<OauthProviderConfig> {
+    const res = await ApiClient.post('/git/oauth-providers', {
+      provider,
+      client_id: clientId,
+      client_secret: clientSecret,
+    });
+    if (!res.ok) throw new Error('failed to save oauth provider');
+    return res.json();
+  }
+
+  static async deleteOauthProvider(provider: string): Promise<void> {
+    const res = await ApiClient.delete(`/git/oauth-providers/${provider}`);
+    if (!res.ok) throw new Error('failed to delete oauth provider');
   }
 
   static async listIssuePrs(
