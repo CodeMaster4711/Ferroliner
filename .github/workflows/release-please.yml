@@ -43,19 +43,18 @@ jobs:
           password: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Build and push amd64
-        uses: docker/build-push-action@v6
-        env:
-          REPO: ${{ github.repository }}
-        with:
-          context: .
-          push: true
-          platforms: linux/amd64
-          tags: ghcr.io/${{ env.REPO }}:${{ needs.release-please.outputs.tag_name }}-amd64
-          cache-from: type=gha,scope=amd64
-          cache-to: type=gha,mode=max,scope=amd64
-          build-args: |
-            JWT_SECRET=change-me-in-production
-            BACKEND_URL=http://localhost:8000
+        run: |
+          REPO=$(echo "${{ github.repository }}" | tr '[:upper:]' '[:lower:]')
+          TAG="${{ needs.release-please.outputs.tag_name }}"
+          docker buildx build \
+            --platform linux/amd64 \
+            --push \
+            --cache-from type=gha,scope=amd64 \
+            --cache-to type=gha,mode=max,scope=amd64 \
+            --build-arg JWT_SECRET=change-me-in-production \
+            --build-arg BACKEND_URL=http://localhost:8000 \
+            --tag ghcr.io/${REPO}:${TAG}-amd64 \
+            .
 
   build-arm64:
     needs: release-please
@@ -78,19 +77,18 @@ jobs:
           password: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Build and push arm64
-        uses: docker/build-push-action@v6
-        env:
-          REPO: ${{ github.repository }}
-        with:
-          context: .
-          push: true
-          platforms: linux/arm64
-          tags: ghcr.io/${{ env.REPO }}:${{ needs.release-please.outputs.tag_name }}-arm64
-          cache-from: type=gha,scope=arm64
-          cache-to: type=gha,mode=max,scope=arm64
-          build-args: |
-            JWT_SECRET=change-me-in-production
-            BACKEND_URL=http://localhost:8000
+        run: |
+          REPO=$(echo "${{ github.repository }}" | tr '[:upper:]' '[:lower:]')
+          TAG="${{ needs.release-please.outputs.tag_name }}"
+          docker buildx build \
+            --platform linux/arm64 \
+            --push \
+            --cache-from type=gha,scope=arm64 \
+            --cache-to type=gha,mode=max,scope=arm64 \
+            --build-arg JWT_SECRET=change-me-in-production \
+            --build-arg BACKEND_URL=http://localhost:8000 \
+            --tag ghcr.io/${REPO}:${TAG}-arm64 \
+            .
 
   merge-manifest:
     needs: [release-please, build-amd64, build-arm64]
