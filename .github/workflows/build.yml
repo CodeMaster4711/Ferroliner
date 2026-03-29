@@ -46,17 +46,17 @@ jobs:
           password: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Build and push amd64
-        uses: docker/build-push-action@v6
-        with:
-          context: .
-          push: true
-          platforms: linux/amd64
-          tags: ghcr.io/${{ github.repository }}:sha-${{ github.sha }}-amd64
-          cache-from: type=gha,scope=amd64
-          cache-to: type=gha,mode=max,scope=amd64
-          build-args: |
-            JWT_SECRET=change-me-in-production
-            BACKEND_URL=http://localhost:8000
+        run: |
+          REPO=$(echo "${{ github.repository }}" | tr '[:upper:]' '[:lower:]')
+          docker buildx build \
+            --platform linux/amd64 \
+            --push \
+            --cache-from type=gha,scope=amd64 \
+            --cache-to type=gha,mode=max,scope=amd64 \
+            --build-arg JWT_SECRET=change-me-in-production \
+            --build-arg BACKEND_URL=http://localhost:8000 \
+            --tag ghcr.io/${REPO}:sha-${{ github.sha }}-amd64 \
+            .
 
   build-arm64:
     needs: check-release
@@ -79,17 +79,17 @@ jobs:
           password: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Build and push arm64
-        uses: docker/build-push-action@v6
-        with:
-          context: .
-          push: true
-          platforms: linux/arm64
-          tags: ghcr.io/${{ github.repository }}:sha-${{ github.sha }}-arm64
-          cache-from: type=gha,scope=arm64
-          cache-to: type=gha,mode=max,scope=arm64
-          build-args: |
-            JWT_SECRET=change-me-in-production
-            BACKEND_URL=http://localhost:8000
+        run: |
+          REPO=$(echo "${{ github.repository }}" | tr '[:upper:]' '[:lower:]')
+          docker buildx build \
+            --platform linux/arm64 \
+            --push \
+            --cache-from type=gha,scope=arm64 \
+            --cache-to type=gha,mode=max,scope=arm64 \
+            --build-arg JWT_SECRET=change-me-in-production \
+            --build-arg BACKEND_URL=http://localhost:8000 \
+            --tag ghcr.io/${REPO}:sha-${{ github.sha }}-arm64 \
+            .
 
   merge-manifest:
     needs: [build-amd64, build-arm64]
@@ -107,8 +107,9 @@ jobs:
 
       - name: Create and push multi-platform manifest
         run: |
+          REPO=$(echo "${{ github.repository }}" | tr '[:upper:]' '[:lower:]')
           docker buildx imagetools create \
-            --tag ghcr.io/${{ github.repository }}:latest \
-            --tag ghcr.io/${{ github.repository }}:sha-${{ github.sha }} \
-            ghcr.io/${{ github.repository }}:sha-${{ github.sha }}-amd64 \
-            ghcr.io/${{ github.repository }}:sha-${{ github.sha }}-arm64
+            --tag ghcr.io/${REPO}:latest \
+            --tag ghcr.io/${REPO}:sha-${{ github.sha }} \
+            ghcr.io/${REPO}:sha-${{ github.sha }}-amd64 \
+            ghcr.io/${REPO}:sha-${{ github.sha }}-arm64
