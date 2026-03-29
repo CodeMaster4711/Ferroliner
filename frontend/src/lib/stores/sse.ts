@@ -1,3 +1,5 @@
+import { get } from 'svelte/store';
+import { authStore } from './auth';
 import { notificationStore } from './notifications';
 import { issueStore } from './issues';
 
@@ -8,7 +10,12 @@ export function connectSse() {
   if (source) return;
 
   function connect() {
-    source = new EventSource('/api/notifications/sse');
+    const token = get(authStore).token;
+    const url = token
+      ? `/api/notifications/sse?token=${encodeURIComponent(token)}`
+      : '/api/notifications/sse';
+
+    source = new EventSource(url);
 
     source.addEventListener('issue.updated', (e) => {
       try {

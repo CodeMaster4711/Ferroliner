@@ -8,6 +8,8 @@ RUN apt-get update && apt-get install -y \
 
 WORKDIR /app
 
+RUN mkdir -p /data
+
 EXPOSE 8000
 
-CMD ["cargo", "watch", "-x", "run"]
+CMD ["cargo", "watch", "-x", "run --bin api"]

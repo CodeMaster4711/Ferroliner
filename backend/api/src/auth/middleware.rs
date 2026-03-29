@@ -19,6 +19,17 @@ impl FromRequestParts<AppState> for AuthenticatedUser {
         parts: &mut Parts,
         state: &AppState,
     ) -> Result<Self, Self::Rejection> {
+        let query_token = parts.uri.query().and_then(|q| {
+            q.split('&').find_map(|pair| {
+                let mut kv = pair.splitn(2, '=');
+                if kv.next()? == "token" {
+                    kv.next()
+                } else {
+                    None
+                }
+            })
+        });
+
         let token = parts
             .headers
             .get("Authorization")
@@ -39,7 +50,8 @@ impl FromRequestParts<AppState> for AuthenticatedUser {
                             }
                         })
                     })
-            });
+            })
+            .or(query_token.as_deref());
 
         if let Some(token) = token {
             let is_blacklisted = InvalidJwt::find()

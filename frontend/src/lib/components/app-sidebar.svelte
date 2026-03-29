@@ -16,6 +16,7 @@
   import LogOutIcon from '@lucide/svelte/icons/log-out';
   import SettingsIcon from '@lucide/svelte/icons/settings';
   import UsersIcon from '@lucide/svelte/icons/users';
+  import GitBranchIcon from '@lucide/svelte/icons/git-branch';
 
   let {
     ref = $bindable(null),
@@ -84,13 +85,26 @@
         </Sidebar.MenuItem>
         <Sidebar.MenuItem>
           <Sidebar.MenuButton
-            isActive={isActive(`/${orgId}/settings`)}
+            isActive={isActive(`/${orgId}/settings`) && !isActive(`/${orgId}/settings/git`)}
             tooltipContent="Organization Settings"
           >
             {#snippet child({ props })}
               <a href="/{orgId}/settings" {...props} class="flex items-center gap-2 {props.class ?? ''}">
                 <UsersIcon class="h-3.5 w-3.5 flex-shrink-0" />
                 <span class="text-sm">Members</span>
+              </a>
+            {/snippet}
+          </Sidebar.MenuButton>
+        </Sidebar.MenuItem>
+        <Sidebar.MenuItem>
+          <Sidebar.MenuButton
+            isActive={isActive(`/${orgId}/settings/git`)}
+            tooltipContent="Git Integrations"
+          >
+            {#snippet child({ props })}
+              <a href="/{orgId}/settings/git" {...props} class="flex items-center gap-2 {props.class ?? ''}">
+                <GitBranchIcon class="h-3.5 w-3.5 flex-shrink-0" />
+                <span class="text-sm">Git</span>
               </a>
             {/snippet}
           </Sidebar.MenuButton>
@@ -173,6 +187,10 @@
             <DropdownMenu.Item onclick={() => goto(`/${orgId}/settings`)}>
               <UsersIcon />
               Organization
+            </DropdownMenu.Item>
+            <DropdownMenu.Item onclick={() => goto(`/${orgId}/settings/git`)}>
+              <GitBranchIcon />
+              Git Integrations
             </DropdownMenu.Item>
             <DropdownMenu.Separator />
             <DropdownMenu.Item onclick={logout}>

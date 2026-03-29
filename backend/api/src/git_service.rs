@@ -715,9 +715,6 @@ pub async fn upsert_oauth_provider_config(
     client_secret: String,
 ) -> GitResult<OauthProviderConfigPublic> {
     let key_b64 = aes_key_b64(aes_key);
-    let client_secret_enc = encrypt_secret(&client_secret, &key_b64)
-        .map_err(|e| GitError::Crypto(e.to_string()))?;
-
     let now = chrono::Utc::now().fixed_offset();
 
     let existing = OauthProviderConfig::find()
@@ -728,15 +725,24 @@ pub async fn upsert_oauth_provider_config(
     let model = if let Some(row) = existing {
         let mut active: oauth_provider_config::ActiveModel = row.into();
         active.client_id = Set(client_id);
-        active.client_secret_enc = Set(client_secret_enc);
+        if !client_secret.is_empty() {
+            let enc = encrypt_secret(&client_secret, &key_b64)
+                .map_err(|e| GitError::Crypto(e.to_string()))?;
+            active.client_secret_enc = Set(enc);
+        }
         active.updated_at = Set(now);
         active.update(db).await?
     } else {
+        if client_secret.is_empty() {
+            return Err(GitError::Crypto("client_secret required for new provider".into()));
+        }
+        let enc = encrypt_secret(&client_secret, &key_b64)
+            .map_err(|e| GitError::Crypto(e.to_string()))?;
         oauth_provider_config::ActiveModel {
             id: Set(Uuid::new_v4()),
             provider: Set(provider),
             client_id: Set(client_id),
-            client_secret_enc: Set(client_secret_enc),
+            client_secret_enc: Set(enc),
             created_at: Set(now),
             updated_at: Set(now),
         }
