@@ -225,7 +225,7 @@ pub async fn initialize_database(
 
     // 5. Create admin user
     let admin_user_id = if let Some(existing_admin) = User::find()
-        .filter(user::Column::Name.eq("admin@local.com"))
+        .filter(user::Column::Email.eq("admin@local.com"))
         .one(db)
         .await?
     {
@@ -238,7 +238,7 @@ pub async fn initialize_database(
 
         let admin_user = user::ActiveModel {
             id: ActiveValue::Set(user_id),
-            name: ActiveValue::Set("admin@local.com".to_string()),
+            name: ActiveValue::Set("Admin".to_string()),
             password: ActiveValue::Set(hashed_password),
             salt: ActiveValue::Set(salt),
             email: ActiveValue::Set(Some("admin@local.com".to_string())),

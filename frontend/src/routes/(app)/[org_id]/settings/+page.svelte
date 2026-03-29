@@ -59,7 +59,7 @@
   }
 
   async function createUser() {
-    if (!newUsername.trim() || !newPassword.trim() || !newRoleId) return;
+    if (!newUsername.trim() || !newEmail.trim() || !newPassword.trim() || !newRoleId) return;
     userCreating = true;
     userMessage = '';
     try {
@@ -67,7 +67,7 @@
       const encryptedPassword = await AuthService.encryptPassword(newPassword, publicKey);
       const user = await OrganizationService.createUser({
         username: newUsername.trim(),
-        email: newEmail.trim() || undefined,
+        email: newEmail.trim(),
         password: encryptedPassword,
         role_id: newRoleId,
         force_password_change: newForceChange,
@@ -193,10 +193,11 @@
                 />
               </div>
               <div class="flex flex-col gap-1">
-                <label class="text-xs text-muted-foreground">Email</label>
+                <label class="text-xs text-muted-foreground">Email *</label>
                 <input
                   type="email"
                   bind:value={newEmail}
+                  required
                   class="rounded-md border border-border bg-background px-2.5 py-1.5 text-sm focus:outline-none focus:ring-1 focus:ring-ring"
                 />
               </div>
@@ -227,7 +228,7 @@
             <div class="flex items-center gap-3">
               <button
                 onclick={createUser}
-                disabled={userCreating || !newUsername.trim() || !newPassword.trim()}
+                disabled={userCreating || !newUsername.trim() || !newEmail.trim() || !newPassword.trim()}
                 class="rounded-md bg-primary px-3 py-1.5 text-xs font-medium text-primary-foreground hover:bg-primary/90 disabled:opacity-50"
               >
                 Create

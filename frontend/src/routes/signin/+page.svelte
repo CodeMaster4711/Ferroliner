@@ -61,8 +61,8 @@
     </div>
   </div>
 
-  <div class="flex w-full flex-col items-center justify-center px-8 lg:w-1/2 lg:px-16">
-    <div class="w-full max-w-sm">
+  <div class="flex w-full flex-col items-center justify-center px-8 lg:w-72 lg:flex-none lg:px-0">
+    <div class="w-full max-w-xs">
       <div class="mb-8">
         <h2 class="text-2xl font-semibold tracking-tight">Sign in</h2>
         <p class="mt-1 text-sm text-muted-foreground">Enter your credentials to continue</p>
@@ -76,15 +76,15 @@
         {/if}
 
         <Field>
-          <FieldLabel for="username">Username</FieldLabel>
+          <FieldLabel for="username">Email</FieldLabel>
           <Input
             id="username"
-            type="text"
+            type="email"
             bind:value={username}
-            placeholder="username"
+            placeholder="name@example.com"
             disabled={isLoading}
             required
-            autocomplete="username"
+            autocomplete="email"
           />
         </Field>
 

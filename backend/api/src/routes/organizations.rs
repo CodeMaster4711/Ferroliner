@@ -55,7 +55,7 @@ pub struct RoleResponse {
 #[derive(Debug, Serialize, Deserialize)]
 pub struct CreateUserRequest {
     pub username: String,
-    pub email: Option<String>,
+    pub email: String,
     pub password: String,
     pub role_id: Uuid,
     pub force_password_change: bool,
@@ -347,7 +347,7 @@ async fn create_user(
     }
 
     let existing = entity::User::find()
-        .filter(entity::user::Column::Name.eq(&req.username))
+        .filter(entity::user::Column::Email.eq(&req.email))
         .one(db)
         .await
         .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
@@ -374,7 +374,7 @@ async fn create_user(
         name: ActiveValue::Set(req.username.clone()),
         password: ActiveValue::Set(hashed_password),
         salt: ActiveValue::Set(salt),
-        email: ActiveValue::Set(req.email.clone()),
+        email: ActiveValue::Set(Some(req.email.clone())),
         two_factor_secret: ActiveValue::NotSet,
         two_factor_enabled: ActiveValue::Set(false),
         force_password_change: ActiveValue::Set(req.force_password_change),

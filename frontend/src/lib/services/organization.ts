@@ -28,7 +28,7 @@ export interface RoleResponse {
 
 export interface CreateUserData {
   username: string;
-  email?: string;
+  email: string;
   password: string;
   role_id: string;
   force_password_change: boolean;
@@ -68,7 +68,7 @@ export class OrganizationService {
   static async createUser(data: CreateUserData): Promise<OrgUserResponse> {
     const res = await ApiClient.post('/organization/users', data);
     if (!res.ok) {
-      if (res.status === 409) throw new Error('Username already exists');
+      if (res.status === 409) throw new Error('Email already exists');
       if (res.status === 422) throw new Error('Invalid password encryption');
       throw new Error('Failed to create user');
     }

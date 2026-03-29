@@ -94,8 +94,9 @@ impl AuthService {
         encrypted_password: String,
         two_factor_code: Option<String>,
     ) -> AuthResult<(String, bool, bool)> {
+        let login = username.trim().to_string();
         let user = User::find()
-            .filter(user::Column::Name.eq(&username))
+            .filter(user::Column::Email.eq(&login))
             .one(&self.db)
             .await?
             .ok_or(AuthError::UserNotFound)?;

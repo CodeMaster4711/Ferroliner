@@ -1,5 +1,4 @@
 <script lang="ts">
-  import * as Card from '$lib/components/ui/card/index.js';
   import { Field, FieldLabel } from '$lib/components/ui/field/index.js';
   import { Input } from '$lib/components/ui/input/index.js';
   import { Button } from '$lib/components/ui/button/index.js';
@@ -18,12 +17,12 @@
     event.preventDefault();
 
     if (newPassword !== confirmPassword) {
-      errorMessage = 'Passwörter stimmen nicht überein';
+      errorMessage = 'Passwords do not match';
       return;
     }
 
     if (newPassword.length < 6) {
-      errorMessage = 'Passwort muss mindestens 6 Zeichen lang sein';
+      errorMessage = 'Password must be at least 6 characters';
       return;
     }
 
@@ -32,32 +31,43 @@
 
     try {
       const publicKey = await AuthService.getPublicKey();
-      const encryptedOldPassword = '';
       const encryptedNewPassword = await AuthService.encryptPassword(newPassword, publicKey);
 
-      await SettingsService.changePassword(encryptedOldPassword, encryptedNewPassword);
+      await SettingsService.changePassword('', encryptedNewPassword);
       const user = $authStore.user;
       if (user) {
         authStore.login({ ...user, force_password_change: false }, $authStore.token!);
       }
       goto('/');
     } catch (error) {
-      errorMessage = error instanceof Error ? error.message : 'Passwortänderung fehlgeschlagen';
+      errorMessage = error instanceof Error ? error.message : 'Password change failed';
     } finally {
       isLoading = false;
     }
   }
 </script>
 
-<div class="flex min-h-screen items-center justify-center p-4">
-  <Card.Root class="w-full max-w-md">
-    <Card.Header class="text-center">
-      <Card.Title class="text-2xl">Passwort ändern erforderlich</Card.Title>
-      <Card.Description>
-        Bitte ändern Sie Ihr Passwort, bevor Sie fortfahren.
-      </Card.Description>
-    </Card.Header>
-    <Card.Content>
+<div class="flex min-h-screen">
+  <div class="relative hidden overflow-hidden lg:flex lg:flex-1 lg:flex-col lg:justify-end lg:p-12">
+    <img
+      src="/Gradient-dark.svg"
+      alt=""
+      class="absolute inset-0 h-full w-full object-cover"
+      aria-hidden="true"
+    />
+    <div class="relative z-10">
+      <h1 class="text-5xl font-bold tracking-tight text-white">Ferroliner</h1>
+      <p class="mt-3 text-base text-white/60">Project management for railway operations</p>
+    </div>
+  </div>
+
+  <div class="flex w-full flex-col items-center justify-center px-8 lg:w-72 lg:flex-none lg:px-0">
+    <div class="w-full max-w-xs">
+      <div class="mb-8">
+        <h2 class="text-2xl font-semibold tracking-tight">Change password</h2>
+        <p class="mt-1 text-sm text-muted-foreground">Choose a new password to continue</p>
+      </div>
+
       <form onsubmit={handlePasswordChange} class="space-y-4">
         {#if errorMessage}
           <Alert variant="destructive">
@@ -66,7 +76,7 @@
         {/if}
 
         <Field>
-          <FieldLabel for="new-password">Neues Passwort</FieldLabel>
+          <FieldLabel for="new-password">New password</FieldLabel>
           <Input
             id="new-password"
             type="password"
@@ -75,11 +85,12 @@
             disabled={isLoading}
             required
             minlength={6}
+            autocomplete="new-password"
           />
         </Field>
 
         <Field>
-          <FieldLabel for="confirm-password">Passwort bestätigen</FieldLabel>
+          <FieldLabel for="confirm-password">Confirm password</FieldLabel>
           <Input
             id="confirm-password"
             type="password"
@@ -88,16 +99,17 @@
             disabled={isLoading}
             required
             minlength={6}
+            autocomplete="new-password"
           />
         </Field>
 
         <Button type="submit" disabled={isLoading} class="w-full">
           {#if isLoading}
-            <div class="animate-spin rounded-full h-4 w-4 border-b-2 border-current mr-2"></div>
+            <div class="mr-2 h-4 w-4 animate-spin rounded-full border-b-2 border-current"></div>
           {/if}
-          Passwort ändern
+          Set password
         </Button>
       </form>
-    </Card.Content>
-  </Card.Root>
+    </div>
+  </div>
 </div>
