@@ -114,6 +114,7 @@
       {:else}
         {#each integrations as integration (integration.id)}
           <GitIntegrationCard
+            {orgId}
             {integration}
             onDisconnect={() => disconnect(integration.id)}
           />

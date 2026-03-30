@@ -3,7 +3,6 @@
   import type { GitIntegration } from '$lib/services/git';
   import { ProjectsService } from '$lib/services/projects';
   import type { Project } from '$lib/types';
-  import { onMount } from 'svelte';
 
   let {
     orgId,
@@ -32,13 +31,15 @@
   let defaultBranch = $state('');
   let linkingRepo = $state(false);
 
-  onMount(() => {
-    ProjectsService.list(orgId)
-      .then((p) => {
-        projects = p;
-        if (p.length > 0) selectedProjectId = p[0].id;
-      })
-      .catch(() => {});
+  $effect(() => {
+    if (open && orgId && step === 'repo' && projects.length === 0) {
+      ProjectsService.list(orgId)
+        .then((p) => {
+          projects = p;
+          if (p.length > 0) selectedProjectId = p[0].id;
+        })
+        .catch(() => {});
+    }
   });
 
   $effect(() => {
