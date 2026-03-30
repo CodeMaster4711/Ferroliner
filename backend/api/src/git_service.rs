@@ -315,6 +315,87 @@ pub async fn exchange_oauth_code(
     })
 }
 
+async fn delete_existing_hooks(
+    http: &reqwest::Client,
+    provider: &str,
+    base: &str,
+    repo_full_name: &str,
+    access_token: &str,
+    webhook_url: &str,
+) -> GitResult<()> {
+    let list_url = match provider {
+        "gitlab" => {
+            let encoded = urlencoding::encode(repo_full_name);
+            format!("{}/api/v4/projects/{}/hooks", base, encoded)
+        }
+        "forgejo" => {
+            let parts: Vec<&str> = repo_full_name.splitn(2, '/').collect();
+            if parts.len() != 2 {
+                return Ok(());
+            }
+            format!("{}/api/v1/repos/{}/{}/hooks", base, parts[0], parts[1])
+        }
+        _ => return Ok(()),
+    };
+
+    let auth_header = match provider {
+        "gitlab" => format!("Bearer {access_token}"),
+        _ => format!("token {access_token}"),
+    };
+
+    let resp = http
+        .get(&list_url)
+        .header("Authorization", &auth_header)
+        .send()
+        .await
+        .map_err(|e| GitError::ProviderError(e.to_string()))?;
+
+    if !resp.status().is_success() {
+        return Ok(());
+    }
+
+    let hooks: serde_json::Value = resp
+        .json()
+        .await
+        .map_err(|e| GitError::ProviderError(e.to_string()))?;
+
+    let hooks = match hooks.as_array() {
+        Some(a) => a.clone(),
+        None => return Ok(()),
+    };
+
+    for hook in hooks {
+        let hook_url = match provider {
+            "gitlab" => hook["url"].as_str().unwrap_or("").to_string(),
+            _ => hook["config"]["url"].as_str().unwrap_or("").to_string(),
+        };
+        if hook_url != webhook_url {
+            continue;
+        }
+        let hook_id = match hook["id"].as_i64() {
+            Some(id) => id,
+            None => continue,
+        };
+        let delete_url = match provider {
+            "gitlab" => {
+                let encoded = urlencoding::encode(repo_full_name);
+                format!("{}/api/v4/projects/{}/hooks/{}", base, encoded, hook_id)
+            }
+            _ => {
+                let parts: Vec<&str> = repo_full_name.splitn(2, '/').collect();
+                format!("{}/api/v1/repos/{}/{}/hooks/{}", base, parts[0], parts[1], hook_id)
+            }
+        };
+        let _ = http
+            .delete(&delete_url)
+            .header("Authorization", &auth_header)
+            .send()
+            .await;
+    }
+
+    Ok(())
+}
+
 pub async fn register_webhook(
     http: &reqwest::Client,
     provider: &str,
@@ -325,6 +406,9 @@ pub async fn register_webhook(
     webhook_secret: &str,
 ) -> GitResult<()> {
     let base = instance_url.trim_end_matches('/');
+
+    delete_existing_hooks(http, provider, base, repo_full_name, access_token, webhook_url).await?;
+
     let (url, body) = match provider {
         "gitlab" => {
             let encoded = urlencoding::encode(repo_full_name);
@@ -416,14 +500,14 @@ pub async fn enqueue_webhook_job(
 
 fn issue_identifier_regex() -> &'static Regex {
     static RE: OnceLock<Regex> = OnceLock::new();
-    RE.get_or_init(|| Regex::new(r"(?:^|[^A-Z])([A-Z]{2,10}-\d+)").unwrap())
+    RE.get_or_init(|| Regex::new(r"(?i)(?:^|[^A-Z0-9])([A-Z]{2,10}-\d+)").unwrap())
 }
 
 fn extract_identifiers(text: &str) -> Vec<String> {
     issue_identifier_regex()
         .captures_iter(text)
         .filter_map(|c| c.get(1))
-        .map(|m| m.as_str().to_string())
+        .map(|m| m.as_str().to_uppercase())
         .collect()
 }
 
@@ -459,7 +543,7 @@ pub async fn process_webhook_mr(
         "forgejo" => {
             let pr = &payload["pull_request"];
             let title = pr["title"].as_str().unwrap_or("").to_string();
-            let branch = pr["head"]["label"].as_str().unwrap_or("").to_string();
+            let branch = pr["head"]["ref"].as_str().unwrap_or("").to_string();
             let number = pr["number"].as_i64().unwrap_or(0) as i32;
             let url = pr["html_url"].as_str().unwrap_or("").to_string();
             let merged = pr["merged"].as_bool().unwrap_or(false);
@@ -662,6 +746,69 @@ pub async fn list_repositories(
         repos.extend(rows.into_iter().map(GitRepositoryPublic::from));
     }
     Ok(repos)
+}
+
+pub async fn get_integration_provider(
+    db: &DatabaseConnection,
+    integration_id: Uuid,
+) -> GitResult<String> {
+    let integration = GitIntegration::find_by_id(integration_id)
+        .one(db)
+        .await?
+        .ok_or(GitError::NotFound)?;
+    Ok(integration.provider)
+}
+
+pub async fn register_webhook_for_integration(
+    db: &DatabaseConnection,
+    aes_key: &[u8; 32],
+    http: &reqwest::Client,
+    integration_id: Uuid,
+    repo_full_name: &str,
+    webhook_url: &str,
+) -> GitResult<()> {
+    let integration = GitIntegration::find_by_id(integration_id)
+        .one(db)
+        .await?
+        .ok_or(GitError::NotFound)?;
+
+    let key_b64 = aes_key_b64(aes_key);
+    let access_token = integration
+        .access_token_enc
+        .as_deref()
+        .map(|enc| decrypt_secret(enc, &key_b64))
+        .transpose()
+        .map_err(|e| GitError::Crypto(e.to_string()))?
+        .ok_or(GitError::NotFound)?;
+
+    let webhook_secret = integration
+        .webhook_secret_enc
+        .as_deref()
+        .map(|enc| decrypt_secret(enc, &key_b64))
+        .transpose()
+        .map_err(|e| GitError::Crypto(e.to_string()))?
+        .ok_or(GitError::NotFound)?;
+
+    let instance_url = rewrite_for_backend(&integration.instance_url);
+
+    register_webhook(
+        http,
+        &integration.provider,
+        &instance_url,
+        &access_token,
+        repo_full_name,
+        webhook_url,
+        &webhook_secret,
+    )
+    .await
+}
+
+fn rewrite_for_backend(url: &str) -> String {
+    let internal = std::env::var("GIT_INTERNAL_HOST").unwrap_or_default();
+    if internal.is_empty() {
+        return url.to_string();
+    }
+    url.replace("localhost", &internal).replace("127.0.0.1", &internal)
 }
 
 pub async fn link_repository(

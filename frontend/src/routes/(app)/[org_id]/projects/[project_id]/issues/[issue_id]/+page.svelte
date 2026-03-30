@@ -10,7 +10,8 @@
   import IssuePriorityIcon from '$lib/components/issue-board/IssuePriorityIcon.svelte';
   import CommentList from '$lib/components/issue-detail/CommentList.svelte';
   import ActivityFeed from '$lib/components/issue-detail/ActivityFeed.svelte';
-  import GitPrList from '$lib/components/git/GitPrList.svelte';
+  import { GitService } from '$lib/services/git';
+  import type { GitPullRequest } from '$lib/services/git';
   import { authStore } from '$lib/stores/auth';
   import type { IssueStatus } from '$lib/types';
   import { PRIORITY_LABELS } from '$lib/types';
@@ -22,6 +23,7 @@
 
   let statuses = $state<IssueStatus[]>([]);
   let members = $state<import('$lib/types').Member[]>([]);
+  let prs = $state<GitPullRequest[]>([]);
   let editingTitle = $state(false);
   let editingDescription = $state(false);
   let draftTitle = $state('');
@@ -43,9 +45,14 @@
     } catch {
       // ignore
     }
+
+    GitService.listIssuePrs(orgId, projectId, issueId)
+      .then((p) => (prs = p))
+      .catch(() => {});
   });
 
   const issue = $derived($issueStore.currentIssue);
+
 
   async function saveTitle() {
     if (!issue || !draftTitle.trim()) return;
@@ -167,9 +174,41 @@
           </div>
         {/if}
       </div>
-      <div class="mb-6 border-t border-border pt-6">
-        <GitPrList {orgId} {projectId} {issueId} />
-      </div>
+      {#if prs.length > 0}
+        <div class="mb-6 flex flex-col gap-2 border-t border-border pt-6">
+          <span class="text-xs font-medium text-muted-foreground uppercase tracking-wide">Pull Requests</span>
+          {#each prs as pr (pr.id)}
+            <a
+              href={pr.url}
+              target="_blank"
+              rel="noopener noreferrer"
+              class="flex items-center justify-between rounded-lg border bg-card px-4 py-3 shadow-sm hover:bg-accent/30 transition-colors"
+            >
+              <div class="flex items-center gap-3">
+                <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-muted-foreground flex-shrink-0">
+                  <circle cx="18" cy="18" r="3"></circle>
+                  <circle cx="6" cy="6" r="3"></circle>
+                  <path d="M13 6h3a2 2 0 0 1 2 2v7"></path>
+                  <line x1="6" y1="9" x2="6" y2="21"></line>
+                </svg>
+                <div class="flex flex-col gap-0.5">
+                  <span class="text-sm font-medium text-foreground">{pr.title}</span>
+                  <span class="text-xs text-muted-foreground font-mono">{pr.branch}</span>
+                </div>
+              </div>
+              <div class="flex items-center gap-2 flex-shrink-0">
+                <span class="text-xs text-muted-foreground">#{pr.number}</span>
+                <span class="rounded-full px-2 py-0.5 text-xs capitalize font-medium
+                  {pr.state === 'merged' ? 'bg-purple-100 text-purple-800' :
+                   pr.state === 'open' ? 'bg-green-100 text-green-800' :
+                   'bg-muted text-muted-foreground'}">
+                  {pr.state}
+                </span>
+              </div>
+            </a>
+          {/each}
+        </div>
+      {/if}
 
       <div class="mb-6 border-t border-border pt-6">
         <CommentList

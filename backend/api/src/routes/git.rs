@@ -298,17 +298,44 @@ async fn link_repository(
     State(state): State<AppState>,
     Json(body): Json<LinkRepositoryRequest>,
 ) -> Result<Json<git_service::GitRepositoryPublic>, StatusCode> {
-    git_service::link_repository(
+    let repo = git_service::link_repository(
         &state.db_conn,
         id,
         body.project_id,
         body.provider_repo_id,
-        body.full_name,
+        body.full_name.clone(),
         body.default_branch,
     )
     .await
-    .map(Json)
-    .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)
+    .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+
+    let webhook_base = std::env::var("WEBHOOK_BASE_URL")
+        .or_else(|_| std::env::var("BACKEND_URL"))
+        .unwrap_or_else(|_| "http://localhost:8000".to_string());
+    let provider = git_service::get_integration_provider(&state.db_conn, id)
+        .await
+        .unwrap_or_else(|_| "forgejo".to_string());
+    let webhook_url = format!(
+        "{}/api/webhooks/{}/{}",
+        webhook_base.trim_end_matches('/'),
+        provider,
+        id
+    );
+
+    if let Err(e) = git_service::register_webhook_for_integration(
+        &state.db_conn,
+        &state.aes_key,
+        &state.http_client,
+        id,
+        &body.full_name,
+        &webhook_url,
+    )
+    .await
+    {
+        tracing::warn!(error = %e, integration_id = %id, "failed to register webhook");
+    }
+
+    Ok(Json(repo))
 }
 
 async fn list_issue_prs(
@@ -424,25 +451,20 @@ async fn forgejo_webhook(
         None => return StatusCode::UNAUTHORIZED,
     };
 
-    let sig_header = match headers
+    let sig_header = headers
         .get("X-Gitea-Signature")
-        .and_then(|v| v.to_str().ok())
-    {
-        Some(h) => h,
-        None => return StatusCode::UNAUTHORIZED,
-    };
+        .or_else(|| headers.get("X-Hub-Signature-256"))
+        .and_then(|v| v.to_str().ok());
 
-    let mut mac = Hmac::<Sha256>::new_from_slice(secret.as_bytes())
-        .expect("HMAC accepts any key size");
-    mac.update(&body);
-    let computed = format!("{}", hex::encode(mac.finalize().into_bytes()));
-
-    let expected = sig_header
-        .strip_prefix("sha256=")
-        .unwrap_or(sig_header);
-
-    if !constant_time_eq(computed.as_bytes(), expected.as_bytes()) {
-        return StatusCode::UNAUTHORIZED;
+    if let Some(sig) = sig_header {
+        let mut mac = Hmac::<Sha256>::new_from_slice(secret.as_bytes())
+            .expect("HMAC accepts any key size");
+        mac.update(&body);
+        let computed = hex::encode(mac.finalize().into_bytes());
+        let expected = sig.strip_prefix("sha256=").unwrap_or(sig);
+        if !constant_time_eq(computed.as_bytes(), expected.as_bytes()) {
+            return StatusCode::UNAUTHORIZED;
+        }
     }
 
     let payload: serde_json::Value = match serde_json::from_slice(&body) {
