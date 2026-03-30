@@ -17,6 +17,15 @@ use crate::{
     AppState,
 };
 
+fn rewrite_for_backend(url: &str) -> String {
+    let internal = std::env::var("GIT_INTERNAL_HOST").unwrap_or_default();
+    if internal.is_empty() {
+        return url.to_string();
+    }
+    url.replace("localhost", &internal)
+        .replace("127.0.0.1", &internal)
+}
+
 pub fn jwt_routes() -> Router<AppState> {
     Router::new()
         .route(
@@ -152,11 +161,7 @@ async fn oauth_authorize(
 
     let frontend_url =
         std::env::var("FRONTEND_URL").unwrap_or_else(|_| "http://localhost:1420".to_string());
-    let redirect_uri = format!(
-        "{}/{}/settings/git/oauth-callback",
-        frontend_url.trim_end_matches('/'),
-        org_id
-    );
+    let redirect_uri = format!("{}/oauth-callback", frontend_url.trim_end_matches('/'));
 
     let nonce = git_service::generate_oauth_state(
         &state.db_conn,
@@ -196,7 +201,7 @@ struct OauthCallbackQuery {
 }
 
 async fn oauth_callback(
-    _auth: CanConnectGit,
+    auth: CanConnectGit,
     Path(org_id): Path<Uuid>,
     Query(q): Query<OauthCallbackQuery>,
     State(state): State<AppState>,
@@ -222,16 +227,13 @@ async fn oauth_callback(
 
     let frontend_url =
         std::env::var("FRONTEND_URL").unwrap_or_else(|_| "http://localhost:1420".to_string());
-    let redirect_uri = format!(
-        "{}/{}/settings/git/oauth-callback",
-        frontend_url.trim_end_matches('/'),
-        org_id
-    );
+    let redirect_uri = format!("{}/oauth-callback", frontend_url.trim_end_matches('/'));
 
+    let backend_instance_url = rewrite_for_backend(&oauth_state.instance_url);
     let tokens = git_service::exchange_oauth_code(
         &state.http_client,
         &oauth_state.provider,
-        &oauth_state.instance_url,
+        &backend_instance_url,
         &q.code,
         &redirect_uri,
         &client_id,
@@ -263,7 +265,7 @@ async fn oauth_callback(
         tokens.access_token,
         tokens.refresh_token,
         expires_at,
-        Uuid::nil(),
+        auth.0.user_id,
         webhook_secret,
     )
     .await

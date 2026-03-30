@@ -7,7 +7,8 @@ use entity::{
 };
 use regex::Regex;
 use sea_orm::{
-    ActiveModelTrait, ActiveValue::Set, ColumnTrait, DatabaseConnection, EntityTrait, QueryFilter,
+    ActiveModelTrait, ActiveValue::Set, ColumnTrait, DatabaseConnection, EntityTrait,
+    IntoActiveModel, QueryFilter,
 };
 use serde::{Deserialize, Serialize};
 use serde_json::json;
@@ -154,6 +155,23 @@ pub async fn create_integration(
         .map_err(|e| GitError::Crypto(e.to_string()))?;
 
     let now = chrono::Utc::now().fixed_offset();
+
+    if let Some(existing) = GitIntegration::find()
+        .filter(git_integration::Column::OrganizationId.eq(org_id))
+        .filter(git_integration::Column::Provider.eq(&provider))
+        .filter(git_integration::Column::InstanceUrl.eq(&instance_url))
+        .one(db)
+        .await?
+    {
+        let mut active = existing.into_active_model();
+        active.access_token_enc = Set(Some(access_token_enc));
+        active.refresh_token_enc = Set(refresh_token_enc);
+        active.token_expires_at = Set(token_expires_at.map(|t| t.fixed_offset()));
+        active.updated_at = Set(now);
+        let updated = active.update(db).await?;
+        return Ok(updated.into());
+    }
+
     let model = git_integration::ActiveModel {
         id: Set(Uuid::new_v4()),
         organization_id: Set(org_id),

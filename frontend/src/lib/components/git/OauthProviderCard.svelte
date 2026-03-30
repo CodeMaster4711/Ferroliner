@@ -147,7 +147,7 @@
       <div class="rounded-md bg-muted/50 p-3 text-xs text-muted-foreground">
         <p class="font-medium mb-1">Redirect URI bei {providerLabel} eintragen:</p>
         <code class="break-all select-all">
-          {browser ? window.location.origin : 'https://your-domain'}/[org-id]/settings/git/oauth-callback
+          {browser ? window.location.origin : 'https://your-domain'}/oauth-callback
         </code>
       </div>
 
