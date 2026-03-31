@@ -478,9 +478,10 @@ async fn gitlab_webhook(
         .unwrap_or("unknown");
 
     let gl_action = payload["object_attributes"]["action"].as_str().unwrap_or("unknown");
+    let ts = chrono::Utc::now().timestamp();
     let provider_event_id = payload["object_attributes"]["iid"]
         .as_i64()
-        .map(|n| format!("{integration_id}:{n}:{gl_action}"))
+        .map(|n| format!("{integration_id}:{n}:{gl_action}:{ts}"))
         .unwrap_or_else(|| format!("{integration_id}:{}", uuid::Uuid::new_v4()));
 
     match git_service::enqueue_webhook_job(
@@ -559,9 +560,10 @@ async fn forgejo_webhook(
         .unwrap_or("unknown");
 
     let action = payload["action"].as_str().unwrap_or("unknown");
+    let ts = chrono::Utc::now().timestamp();
     let provider_event_id = payload["pull_request"]["number"]
         .as_i64()
-        .map(|n| format!("{integration_id}:{n}:{action}"))
+        .map(|n| format!("{integration_id}:{n}:{action}:{ts}"))
         .unwrap_or_else(|| format!("{integration_id}:{}", uuid::Uuid::new_v4()));
 
     match git_service::enqueue_webhook_job(
