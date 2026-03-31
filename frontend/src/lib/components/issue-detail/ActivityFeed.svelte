@@ -87,9 +87,17 @@
   <h3 class="text-sm font-semibold text-foreground">Activity</h3>
   {#each activity as event (event.id)}
     <div class="flex items-start gap-2 text-xs text-muted-foreground">
-      <span class="flex h-5 w-5 items-center justify-center rounded-full bg-muted text-xs font-medium flex-shrink-0">
-        {event.actor_id?.slice(0, 1).toUpperCase() ?? '?'}
-      </span>
+      {#if event.actor_id}
+        <span class="flex h-5 w-5 items-center justify-center rounded-full bg-muted text-xs font-medium flex-shrink-0">
+          {event.actor_id.slice(0, 1).toUpperCase()}
+        </span>
+      {:else}
+        <span class="flex h-5 w-5 items-center justify-center rounded-full bg-muted flex-shrink-0">
+          <svg viewBox="0 0 16 16" class="h-3 w-3 text-muted-foreground" fill="currentColor" aria-hidden="true">
+            <path d="M7.177 3.073L9.573.677A.25.25 0 0 1 10 .854V2.5h1A2.5 2.5 0 0 1 13.5 5v5.628a2.251 2.251 0 1 1-.5 0V5a2 2 0 0 0-2-2h-1v1.646a.25.25 0 0 1-.427.177L7.177 2.427a.25.25 0 0 1 0-.354zM3.75 2.5a.75.75 0 1 0 0 1.5.75.75 0 0 0 0-1.5zm-2.25.75a2.25 2.25 0 1 1 3 2.122v5.256a2.251 2.251 0 1 1-.5 0V5.372A2.25 2.25 0 0 1 1.5 3.25zM11 2.5h-1V4h1a1 1 0 0 1 1 1v5.628A2.251 2.251 0 0 0 12.25 13.5a.75.75 0 1 1 0 1.5 2.25 2.25 0 1 1 0-4.5h.25V5A2.5 2.5 0 0 0 10 2.5zm-.25 11.25a.75.75 0 1 0 1.5 0 .75.75 0 0 0-1.5 0zM3.75 12a.75.75 0 1 0 0 1.5.75.75 0 0 0 0-1.5z"/>
+          </svg>
+        </span>
+      {/if}
       <span>
         {#if isGitPrKind(event.kind)}
           {@const pr = parsePrMeta(event.to_value)}

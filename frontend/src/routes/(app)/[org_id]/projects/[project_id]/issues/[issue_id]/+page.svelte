@@ -178,19 +178,29 @@
         <div class="mb-6 flex flex-col gap-2 border-t border-border pt-6">
           <span class="text-xs font-medium text-muted-foreground uppercase tracking-wide">Pull Requests</span>
           {#each prs as pr (pr.id)}
+            {@const stateColor = pr.state === 'merged' ? '#a855f7' : pr.state === 'open' ? '#22c55e' : '#ef4444'}
             <a
               href={pr.url}
               target="_blank"
               rel="noopener noreferrer"
-              class="flex items-center justify-between rounded-lg border bg-card px-4 py-3 shadow-sm hover:bg-accent/30 transition-colors"
+              class="flex items-center justify-between rounded-lg border bg-muted/60 px-4 py-3 hover:bg-muted transition-colors"
             >
               <div class="flex items-center gap-3">
-                <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-muted-foreground flex-shrink-0">
-                  <circle cx="18" cy="18" r="3"></circle>
-                  <circle cx="6" cy="6" r="3"></circle>
-                  <path d="M13 6h3a2 2 0 0 1 2 2v7"></path>
-                  <line x1="6" y1="9" x2="6" y2="21"></line>
-                </svg>
+                {#if pr.provider === 'forgejo'}
+                  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 212 212" width="14" height="14" class="flex-shrink-0" aria-hidden="true">
+                    <g transform="translate(6 6)" fill="none">
+                      <path d="M58 168V70a50 50 0 0 1 50-50h20" stroke="#f60" stroke-width="25"/>
+                      <path d="M58 168v-30a50 50 0 0 1 50-50h20" stroke="#d40000" stroke-width="25"/>
+                      <circle cx="142" cy="20" r="18" stroke="#f60" stroke-width="15"/>
+                      <circle cx="142" cy="88" r="18" stroke="#d40000" stroke-width="15"/>
+                      <circle cx="58" cy="180" r="18" stroke="#d40000" stroke-width="15"/>
+                    </g>
+                  </svg>
+                {:else}
+                  <svg viewBox="0 0 16 16" width="14" height="14" class="text-muted-foreground flex-shrink-0" fill="currentColor" aria-hidden="true">
+                    <path d="M7.177 3.073L9.573.677A.25.25 0 0 1 10 .854V2.5h1A2.5 2.5 0 0 1 13.5 5v5.628a2.251 2.251 0 1 1-.5 0V5a2 2 0 0 0-2-2h-1v1.646a.25.25 0 0 1-.427.177L7.177 2.427a.25.25 0 0 1 0-.354zM3.75 2.5a.75.75 0 1 0 0 1.5.75.75 0 0 0 0-1.5zm-2.25.75a2.25 2.25 0 1 1 3 2.122v5.256a2.251 2.251 0 1 1-.5 0V5.372A2.25 2.25 0 0 1 1.5 3.25zM11 2.5h-1V4h1a1 1 0 0 1 1 1v5.628A2.251 2.251 0 0 0 12.25 13.5a.75.75 0 1 1 0 1.5 2.25 2.25 0 1 1 0-4.5h.25V5A2.5 2.5 0 0 0 10 2.5zm-.25 11.25a.75.75 0 1 0 1.5 0 .75.75 0 0 0-1.5 0zM3.75 12a.75.75 0 1 0 0 1.5.75.75 0 0 0 0-1.5z"/>
+                  </svg>
+                {/if}
                 <div class="flex flex-col gap-0.5">
                   <span class="text-sm font-medium text-foreground">{pr.title}</span>
                   <span class="text-xs text-muted-foreground font-mono">{pr.branch}</span>
@@ -198,10 +208,10 @@
               </div>
               <div class="flex items-center gap-2 flex-shrink-0">
                 <span class="text-xs text-muted-foreground">#{pr.number}</span>
-                <span class="rounded-full px-2 py-0.5 text-xs capitalize font-medium
-                  {pr.state === 'merged' ? 'bg-purple-100 text-purple-800' :
-                   pr.state === 'open' ? 'bg-green-100 text-green-800' :
-                   'bg-muted text-muted-foreground'}">
+                <span
+                  class="rounded-full px-2 py-0.5 text-xs font-medium capitalize"
+                  style="background-color: {stateColor}20; color: {stateColor}"
+                >
                   {pr.state}
                 </span>
               </div>

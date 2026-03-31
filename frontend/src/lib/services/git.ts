@@ -26,6 +26,7 @@ export interface GitPullRequest {
   id: string;
   repository_id: string;
   provider_pr_id: string;
+  provider: string;
   number: number;
   title: string;
   state: 'open' | 'merged' | 'closed';

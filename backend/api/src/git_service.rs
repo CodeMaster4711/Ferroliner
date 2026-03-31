@@ -92,6 +92,7 @@ pub struct GitPullRequestPublic {
     pub id: Uuid,
     pub repository_id: Uuid,
     pub provider_pr_id: String,
+    pub provider: String,
     pub number: i32,
     pub title: String,
     pub state: String,
@@ -102,12 +103,13 @@ pub struct GitPullRequestPublic {
     pub updated_at: String,
 }
 
-impl From<git_pull_request::Model> for GitPullRequestPublic {
-    fn from(m: git_pull_request::Model) -> Self {
+impl GitPullRequestPublic {
+    fn from_model_with_provider(m: git_pull_request::Model, provider: String) -> Self {
         Self {
             id: m.id,
             repository_id: m.repository_id,
             provider_pr_id: m.provider_pr_id,
+            provider,
             number: m.number,
             title: m.title,
             state: m.state,
@@ -117,6 +119,12 @@ impl From<git_pull_request::Model> for GitPullRequestPublic {
             created_at: m.created_at.to_rfc3339(),
             updated_at: m.updated_at.to_rfc3339(),
         }
+    }
+}
+
+impl From<git_pull_request::Model> for GitPullRequestPublic {
+    fn from(m: git_pull_request::Model) -> Self {
+        Self::from_model_with_provider(m, String::new())
     }
 }
 
@@ -880,9 +888,18 @@ pub async fn list_issue_prs(
 
     let mut prs = Vec::new();
     for link in links {
-        if let Some(pr) = GitPullRequest::find_by_id(link.pr_id).one(db).await? {
-            prs.push(pr.into());
-        }
+        let Some(pr) = GitPullRequest::find_by_id(link.pr_id).one(db).await? else {
+            continue;
+        };
+        let provider_str = match GitRepository::find_by_id(pr.repository_id).one(db).await? {
+            Some(repo) => GitIntegration::find_by_id(repo.integration_id)
+                .one(db)
+                .await?
+                .map(|i| i.provider)
+                .unwrap_or_default(),
+            None => String::new(),
+        };
+        prs.push(GitPullRequestPublic::from_model_with_provider(pr, provider_str));
     }
     Ok(prs)
 }
