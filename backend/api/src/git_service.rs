@@ -90,8 +90,9 @@ impl From<git_repository::Model> for GitRepositoryPublic {
 #[derive(Debug, Serialize)]
 pub struct GitPullRequestPublic {
     pub id: Uuid,
-    pub repository_id: Uuid,
+    pub repository_id: Option<Uuid>,
     pub provider_pr_id: String,
+    pub provider: String,
     pub number: i32,
     pub title: String,
     pub state: String,
@@ -102,12 +103,13 @@ pub struct GitPullRequestPublic {
     pub updated_at: String,
 }
 
-impl From<git_pull_request::Model> for GitPullRequestPublic {
-    fn from(m: git_pull_request::Model) -> Self {
+impl GitPullRequestPublic {
+    fn from_model_with_provider(m: git_pull_request::Model, provider: String) -> Self {
         Self {
             id: m.id,
             repository_id: m.repository_id,
             provider_pr_id: m.provider_pr_id,
+            provider,
             number: m.number,
             title: m.title,
             state: m.state,
@@ -117,6 +119,12 @@ impl From<git_pull_request::Model> for GitPullRequestPublic {
             created_at: m.created_at.to_rfc3339(),
             updated_at: m.updated_at.to_rfc3339(),
         }
+    }
+}
+
+impl From<git_pull_request::Model> for GitPullRequestPublic {
+    fn from(m: git_pull_request::Model) -> Self {
+        Self::from_model_with_provider(m, String::new())
     }
 }
 
@@ -167,6 +175,7 @@ pub async fn create_integration(
         active.access_token_enc = Set(Some(access_token_enc));
         active.refresh_token_enc = Set(refresh_token_enc);
         active.token_expires_at = Set(token_expires_at.map(|t| t.fixed_offset()));
+        active.webhook_secret_enc = Set(Some(webhook_secret_enc));
         active.updated_at = Set(now);
         let updated = active.update(db).await?;
         return Ok(updated.into());
@@ -526,19 +535,32 @@ pub async fn process_webhook_mr(
     let payload: serde_json::Value = serde_json::from_str(&job.payload)
         .map_err(|e| GitError::ProviderError(e.to_string()))?;
 
-    let (title, branch, pr_number, pr_url, state) = match job.provider.as_str() {
+    let (title, branch, pr_number, pr_url, state, pr_action) = match job.provider.as_str() {
         "gitlab" => {
             let attrs = &payload["object_attributes"];
             let title = attrs["title"].as_str().unwrap_or("").to_string();
             let branch = attrs["source_branch"].as_str().unwrap_or("").to_string();
             let number = attrs["iid"].as_i64().unwrap_or(0) as i32;
             let url = attrs["url"].as_str().unwrap_or("").to_string();
+            let action = attrs["action"].as_str().unwrap_or("").to_string();
+            let is_draft = attrs["draft"].as_bool().unwrap_or(false)
+                || attrs["work_in_progress"].as_bool().unwrap_or(false);
             let state = match attrs["state"].as_str().unwrap_or("") {
                 "merged" => "merged",
                 "closed" => "closed",
                 _ => "open",
             };
-            (title, branch, number, url, state.to_string())
+            let pr_action = if is_draft && (action == "open" || action == "update") {
+                "draft"
+            } else {
+                match action.as_str() {
+                    "close" => "closed",
+                    "merge" => "merged",
+                    "reopen" => "reopened",
+                    _ => state,
+                }
+            };
+            (title, branch, number, url, state.to_string(), pr_action.to_string())
         }
         "forgejo" => {
             let pr = &payload["pull_request"];
@@ -547,7 +569,9 @@ pub async fn process_webhook_mr(
             let number = pr["number"].as_i64().unwrap_or(0) as i32;
             let url = pr["html_url"].as_str().unwrap_or("").to_string();
             let merged = pr["merged"].as_bool().unwrap_or(false);
+            let is_draft = pr["draft"].as_bool().unwrap_or(false);
             let state_str = pr["state"].as_str().unwrap_or("open");
+            let action = payload["action"].as_str().unwrap_or("").to_string();
             let state = if merged {
                 "merged"
             } else if state_str == "closed" {
@@ -555,7 +579,19 @@ pub async fn process_webhook_mr(
             } else {
                 "open"
             };
-            (title, branch, number, url, state.to_string())
+            let pr_action = if merged {
+                "merged"
+            } else {
+                match action.as_str() {
+                    "closed" => "closed",
+                    "reopened" => "reopened",
+                    "converted_to_draft" => "draft",
+                    "ready_for_review" => "ready_for_review",
+                    _ if is_draft => "draft",
+                    _ => state,
+                }
+            };
+            (title, branch, number, url, state.to_string(), pr_action.to_string())
         }
         p => return Err(GitError::ProviderError(format!("unknown provider: {p}"))),
     };
@@ -599,7 +635,7 @@ pub async fn process_webhook_mr(
         let merged_at = if state == "merged" { Some(now) } else { None };
         git_pull_request::ActiveModel {
             id: Set(Uuid::new_v4()),
-            repository_id: Set(repo.id),
+            repository_id: Set(Some(repo.id)),
             provider_pr_id: Set(provider_pr_id),
             number: Set(pr_number),
             title: Set(title.clone()),
@@ -661,9 +697,12 @@ pub async fn process_webhook_mr(
             write_activity(db, issue.id, "git.branch_linked", &branch).await?;
         }
 
-        let activity_kind = match state.as_str() {
+        let activity_kind = match pr_action.as_str() {
             "merged" => Some("git.pr_merged"),
             "closed" => Some("git.pr_closed"),
+            "reopened" => Some("git.pr_reopened"),
+            "draft" => Some("git.pr_draft"),
+            "ready_for_review" => Some("git.pr_ready"),
             "open" if is_new => Some("git.pr_opened"),
             _ => None,
         };
@@ -672,8 +711,13 @@ pub async fn process_webhook_mr(
             write_activity(db, issue.id, kind, &pr_meta).await?;
         }
 
-        if state == "merged" {
-            transition_issue_done(db, &issue, project.id).await?;
+        match pr_action.as_str() {
+            "merged" => transition_issue_to(db, &issue, project.id, "done").await?,
+            "closed" => transition_issue_to(db, &issue, project.id, "cancelled").await?,
+            "open" | "reopened" | "ready_for_review" | "draft" => {
+                transition_issue_to(db, &issue, project.id, "in_progress").await?
+            }
+            _ => {}
         }
     }
 
@@ -701,27 +745,28 @@ async fn write_activity(
     Ok(())
 }
 
-async fn transition_issue_done(
+async fn transition_issue_to(
     db: &DatabaseConnection,
     issue: &issue::Model,
     project_id: Uuid,
+    status_type: &str,
 ) -> GitResult<()> {
-    let done_status = IssueStatus::find()
+    let target_status = IssueStatus::find()
         .filter(issue_status::Column::ProjectId.eq(project_id))
-        .filter(issue_status::Column::StatusType.eq("done"))
+        .filter(issue_status::Column::StatusType.eq(status_type))
         .one(db)
         .await?;
 
-    let Some(done_status) = done_status else {
+    let Some(target_status) = target_status else {
         return Ok(());
     };
 
-    if issue.status_id == done_status.id {
+    if issue.status_id == target_status.id {
         return Ok(());
     }
 
     let mut active: issue::ActiveModel = issue.clone().into();
-    active.status_id = Set(done_status.id);
+    active.status_id = Set(target_status.id);
     active.updated_at = Set(chrono::Utc::now().naive_utc());
     active.update(db).await?;
 
@@ -811,6 +856,27 @@ fn rewrite_for_backend(url: &str) -> String {
     url.replace("localhost", &internal).replace("127.0.0.1", &internal)
 }
 
+pub async fn unlink_repository(db: &DatabaseConnection, repo_id: Uuid) -> GitResult<()> {
+    let repo = GitRepository::find_by_id(repo_id)
+        .one(db)
+        .await?
+        .ok_or(GitError::NotFound)?;
+    let active: git_repository::ActiveModel = repo.into();
+    active.delete(db).await?;
+    Ok(())
+}
+
+pub async fn list_integration_repositories(
+    db: &DatabaseConnection,
+    integration_id: Uuid,
+) -> GitResult<Vec<GitRepositoryPublic>> {
+    let rows = GitRepository::find()
+        .filter(git_repository::Column::IntegrationId.eq(integration_id))
+        .all(db)
+        .await?;
+    Ok(rows.into_iter().map(GitRepositoryPublic::from).collect())
+}
+
 pub async fn link_repository(
     db: &DatabaseConnection,
     integration_id: Uuid,
@@ -844,9 +910,22 @@ pub async fn list_issue_prs(
 
     let mut prs = Vec::new();
     for link in links {
-        if let Some(pr) = GitPullRequest::find_by_id(link.pr_id).one(db).await? {
-            prs.push(pr.into());
-        }
+        let Some(pr) = GitPullRequest::find_by_id(link.pr_id).one(db).await? else {
+            continue;
+        };
+        let provider_str = if let Some(repo_id) = pr.repository_id {
+            match GitRepository::find_by_id(repo_id).one(db).await? {
+                Some(repo) => GitIntegration::find_by_id(repo.integration_id)
+                    .one(db)
+                    .await?
+                    .map(|i| i.provider)
+                    .unwrap_or_default(),
+                None => String::new(),
+            }
+        } else {
+            String::new()
+        };
+        prs.push(GitPullRequestPublic::from_model_with_provider(pr, provider_str));
     }
     Ok(prs)
 }

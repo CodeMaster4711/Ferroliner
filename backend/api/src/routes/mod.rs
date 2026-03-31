@@ -82,8 +82,7 @@ pub fn create_router() -> Router<AppState> {
         .layer(GovernorLayer::new(webhook_governor_config));
 
     let mut router = Router::new()
-        .nest("/api", api_router)
-        .merge(webhook_router);
+        .nest("/api", api_router.merge(webhook_router));
 
     if let Ok(static_dir) = std::env::var("STATIC_DIR") {
         let index = format!("{}/index.html", static_dir);

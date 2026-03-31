@@ -26,6 +26,7 @@ export interface GitPullRequest {
   id: string;
   repository_id: string;
   provider_pr_id: string;
+  provider: string;
   number: number;
   title: string;
   state: 'open' | 'merged' | 'closed';
@@ -132,6 +133,29 @@ export class GitService {
   static async deleteOauthProvider(provider: string): Promise<void> {
     const res = await ApiClient.delete(`/git/oauth-providers/${provider}`);
     if (!res.ok) throw new Error('failed to delete oauth provider');
+  }
+
+  static async listIntegrationRepositories(orgId: string, integrationId: string): Promise<GitRepository[]> {
+    const res = await ApiClient.get(
+      `/organizations/${orgId}/git/integrations/${integrationId}/repositories`
+    );
+    if (!res.ok) throw new Error('failed to fetch repositories');
+    return res.json();
+  }
+
+  static async unlinkRepository(orgId: string, integrationId: string, repoId: string): Promise<void> {
+    const res = await ApiClient.delete(
+      `/organizations/${orgId}/git/integrations/${integrationId}/repositories/${repoId}`
+    );
+    if (!res.ok) throw new Error('failed to unlink repository');
+  }
+
+  static async syncWebhook(orgId: string, integrationId: string): Promise<void> {
+    const res = await ApiClient.post(
+      `/organizations/${orgId}/git/integrations/${integrationId}/sync-webhook`,
+      {}
+    );
+    if (!res.ok) throw new Error('failed to sync webhook');
   }
 
   static async listIssuePrs(
