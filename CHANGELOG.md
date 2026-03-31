@@ -1,5 +1,29 @@
 # Changelog
 
+## [1.4.0](https://github.com/CodeMaster4711/Ferroliner/compare/v1.3.2...v1.4.0) (2026-03-31)
+
+
+### Features
+
+* add admin UI for OAuth provider configuration (GitLab + Forgejo) ([dde400c](https://github.com/CodeMaster4711/Ferroliner/commit/dde400c9fbff7e6c0214e905e1189cbb1da0ebe2))
+* add link repo modal to git integration card with reliable project loading ([4a35cee](https://github.com/CodeMaster4711/Ferroliner/commit/4a35ceef19223187333816abadd6fc2604ae6ac8))
+* add PR lifecycle webhook handling and activity status badges ([8b51283](https://github.com/CodeMaster4711/Ferroliner/commit/8b512835f0436e42eaa528ab26bc3904e81c5167))
+* added oauth for gitlab and forgejo connection ([376a5e5](https://github.com/CodeMaster4711/Ferroliner/commit/376a5e572242643cff17280fa5f655ed2e63831d))
+* implement Phase 4 git integrations (GitLab + Forgejo) ([bb2cfe3](https://github.com/CodeMaster4711/Ferroliner/commit/bb2cfe31b74d4ccbc3b94eee2e419f447da078b4))
+* preserve PRs on repo unlink, add unlink/sync-webhook endpoints and UI ([d65cdc9](https://github.com/CodeMaster4711/Ferroliner/commit/d65cdc9f143efd9df487f7087acb46ae57e0b0a0))
+
+
+### Bug Fixes
+
+* include action in provider_event_id to allow multiple webhook events per PR ([59ae09d](https://github.com/CodeMaster4711/Ferroliner/commit/59ae09d5618588d3c5e81915c40c440f09c2bb09))
+* include timestamp in provider_event_id to allow repeated actions on same PR ([150c154](https://github.com/CodeMaster4711/Ferroliner/commit/150c15402d6cf2823b8bad0f793da183ce14e17a))
+* mount webhook router under /api and restore webhook URL prefix ([22282af](https://github.com/CodeMaster4711/Ferroliner/commit/22282af4b9af4766c0b53e6ea421fa3a979e2be9))
+* remove activity question mark icon, add provider to PR model, update PR cards with logo and state colors ([b18b8c1](https://github.com/CodeMaster4711/Ferroliner/commit/b18b8c1097f6452c1eecf584ca28820b4eddd781))
+* replace inline SVG style tag with explicit attributes to prevent global style leak ([e99d18a](https://github.com/CodeMaster4711/Ferroliner/commit/e99d18adb50fa02a94f21d4feefb70b9213d23aa))
+* resolve oauth callback failures for forgejo integration ([09a5974](https://github.com/CodeMaster4711/Ferroliner/commit/09a59743770da07dc8e36a80b62dc7cad41a6d71))
+* restore webhook signature validation and sync secret on re-link ([fd68839](https://github.com/CodeMaster4711/Ferroliner/commit/fd68839987ad121aaa74ffe8f48334c45f00b4c8))
+* split multi-column ALTER TABLE into separate statements for SQLite compatibility ([587ca40](https://github.com/CodeMaster4711/Ferroliner/commit/587ca40afa519e4c2d186d649b9fa5e1b68bd880))
+
 ## [1.3.2](https://github.com/CodeMaster4711/Ferroliner/compare/v1.3.1...v1.3.2) (2026-03-29)
 
 
