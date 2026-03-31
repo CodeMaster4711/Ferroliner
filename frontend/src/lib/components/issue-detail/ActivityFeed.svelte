@@ -100,13 +100,12 @@
           >
             {#if pr?.provider === 'forgejo'}
               <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 212 212" class="h-3 w-3 flex-shrink-0" aria-hidden="true">
-                <style>circle,path{fill:none;stroke:#000;stroke-width:15}path{stroke-width:25}.o{stroke:#f60}.r{stroke:#d40000}</style>
-                <g transform="translate(6 6)">
-                  <path d="M58 168V70a50 50 0 0 1 50-50h20" class="o"/>
-                  <path d="M58 168v-30a50 50 0 0 1 50-50h20" class="r"/>
-                  <circle cx="142" cy="20" r="18" class="o"/>
-                  <circle cx="142" cy="88" r="18" class="r"/>
-                  <circle cx="58" cy="180" r="18" class="r"/>
+                <g transform="translate(6 6)" fill="none">
+                  <path d="M58 168V70a50 50 0 0 1 50-50h20" stroke="#f60" stroke-width="25" stroke-linecap="butt"/>
+                  <path d="M58 168v-30a50 50 0 0 1 50-50h20" stroke="#d40000" stroke-width="25" stroke-linecap="butt"/>
+                  <circle cx="142" cy="20" r="18" stroke="#f60" stroke-width="15"/>
+                  <circle cx="142" cy="88" r="18" stroke="#d40000" stroke-width="15"/>
+                  <circle cx="58" cy="180" r="18" stroke="#d40000" stroke-width="15"/>
                 </g>
               </svg>
             {:else}
