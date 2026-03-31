@@ -50,7 +50,15 @@ pub fn jwt_routes() -> Router<AppState> {
         )
         .route(
             "/organizations/{org_id}/git/integrations/{id}/repositories",
-            axum::routing::post(link_repository),
+            axum::routing::get(list_integration_repositories).post(link_repository),
+        )
+        .route(
+            "/organizations/{org_id}/git/integrations/{id}/repositories/{repo_id}",
+            axum::routing::delete(unlink_repository),
+        )
+        .route(
+            "/organizations/{org_id}/git/integrations/{id}/sync-webhook",
+            axum::routing::post(sync_webhook),
         )
         .route(
             "/organizations/{org_id}/projects/{project_id}/issues/{issue_id}/git/prs",
@@ -336,6 +344,78 @@ async fn link_repository(
     }
 
     Ok(Json(repo))
+}
+
+async fn list_integration_repositories(
+    _auth: CanViewIssues,
+    Path((_org_id, id)): Path<(Uuid, Uuid)>,
+    State(state): State<AppState>,
+) -> Result<Json<Vec<git_service::GitRepositoryPublic>>, StatusCode> {
+    git_service::list_integration_repositories(&state.db_conn, id)
+        .await
+        .map(Json)
+        .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)
+}
+
+async fn unlink_repository(
+    _auth: CanConnectGit,
+    Path((_org_id, _integration_id, repo_id)): Path<(Uuid, Uuid, Uuid)>,
+    State(state): State<AppState>,
+) -> StatusCode {
+    match git_service::unlink_repository(&state.db_conn, repo_id).await {
+        Ok(()) => StatusCode::NO_CONTENT,
+        Err(git_service::GitError::NotFound) => StatusCode::NOT_FOUND,
+        Err(_) => StatusCode::INTERNAL_SERVER_ERROR,
+    }
+}
+
+async fn sync_webhook(
+    _auth: CanConnectGit,
+    Path((org_id, id)): Path<(Uuid, Uuid)>,
+    State(state): State<AppState>,
+) -> StatusCode {
+    let repos = match git_service::list_integration_repositories(&state.db_conn, id).await {
+        Ok(r) => r,
+        Err(_) => return StatusCode::INTERNAL_SERVER_ERROR,
+    };
+
+    let webhook_base = std::env::var("WEBHOOK_BASE_URL")
+        .or_else(|_| std::env::var("BACKEND_URL"))
+        .unwrap_or_else(|_| "http://localhost:8000".to_string());
+    let provider = match git_service::get_integration_provider(&state.db_conn, id).await {
+        Ok(p) => p,
+        Err(_) => return StatusCode::INTERNAL_SERVER_ERROR,
+    };
+    let webhook_url = format!(
+        "{}/api/webhooks/{}/{}",
+        webhook_base.trim_end_matches('/'),
+        provider,
+        id
+    );
+    let _ = org_id;
+
+    let mut any_err = false;
+    for repo in repos {
+        if let Err(e) = git_service::register_webhook_for_integration(
+            &state.db_conn,
+            &state.aes_key,
+            &state.http_client,
+            id,
+            &repo.full_name,
+            &webhook_url,
+        )
+        .await
+        {
+            tracing::warn!(error = %e, repo = %repo.full_name, "failed to sync webhook");
+            any_err = true;
+        }
+    }
+
+    if any_err {
+        StatusCode::BAD_GATEWAY
+    } else {
+        StatusCode::NO_CONTENT
+    }
 }
 
 async fn list_issue_prs(

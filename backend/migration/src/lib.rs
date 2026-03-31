@@ -12,6 +12,7 @@ mod m20250001_000009_create_comments_and_activity;
 mod m20250001_000011_create_notifications;
 mod m20250001_000014_create_git_integrations;
 mod m20250001_000015_create_oauth_provider_config;
+mod m20250001_000016_pr_repository_nullable;
 
 pub struct Migrator;
 
@@ -31,6 +32,7 @@ impl MigratorTrait for Migrator {
             Box::new(m20250001_000011_create_notifications::Migration),
             Box::new(m20250001_000014_create_git_integrations::Migration),
             Box::new(m20250001_000015_create_oauth_provider_config::Migration),
+            Box::new(m20250001_000016_pr_repository_nullable::Migration),
         ]
     }
 }

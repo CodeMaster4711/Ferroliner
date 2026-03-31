@@ -6,7 +6,7 @@ use serde::{Deserialize, Serialize};
 pub struct Model {
     #[sea_orm(primary_key, auto_increment = false)]
     pub id: Uuid,
-    pub repository_id: Uuid,
+    pub repository_id: Option<Uuid>,
     pub provider_pr_id: String,
     pub number: i32,
     pub title: String,
@@ -24,7 +24,7 @@ pub enum Relation {
         belongs_to = "super::git_repository::Entity",
         from = "Column::RepositoryId",
         to = "super::git_repository::Column::Id",
-        on_delete = "Cascade"
+        on_delete = "SetNull"
     )]
     GitRepository,
 }

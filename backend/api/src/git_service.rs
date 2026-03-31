@@ -90,7 +90,7 @@ impl From<git_repository::Model> for GitRepositoryPublic {
 #[derive(Debug, Serialize)]
 pub struct GitPullRequestPublic {
     pub id: Uuid,
-    pub repository_id: Uuid,
+    pub repository_id: Option<Uuid>,
     pub provider_pr_id: String,
     pub provider: String,
     pub number: i32,
@@ -175,6 +175,7 @@ pub async fn create_integration(
         active.access_token_enc = Set(Some(access_token_enc));
         active.refresh_token_enc = Set(refresh_token_enc);
         active.token_expires_at = Set(token_expires_at.map(|t| t.fixed_offset()));
+        active.webhook_secret_enc = Set(Some(webhook_secret_enc));
         active.updated_at = Set(now);
         let updated = active.update(db).await?;
         return Ok(updated.into());
@@ -634,7 +635,7 @@ pub async fn process_webhook_mr(
         let merged_at = if state == "merged" { Some(now) } else { None };
         git_pull_request::ActiveModel {
             id: Set(Uuid::new_v4()),
-            repository_id: Set(repo.id),
+            repository_id: Set(Some(repo.id)),
             provider_pr_id: Set(provider_pr_id),
             number: Set(pr_number),
             title: Set(title.clone()),
@@ -855,6 +856,27 @@ fn rewrite_for_backend(url: &str) -> String {
     url.replace("localhost", &internal).replace("127.0.0.1", &internal)
 }
 
+pub async fn unlink_repository(db: &DatabaseConnection, repo_id: Uuid) -> GitResult<()> {
+    let repo = GitRepository::find_by_id(repo_id)
+        .one(db)
+        .await?
+        .ok_or(GitError::NotFound)?;
+    let active: git_repository::ActiveModel = repo.into();
+    active.delete(db).await?;
+    Ok(())
+}
+
+pub async fn list_integration_repositories(
+    db: &DatabaseConnection,
+    integration_id: Uuid,
+) -> GitResult<Vec<GitRepositoryPublic>> {
+    let rows = GitRepository::find()
+        .filter(git_repository::Column::IntegrationId.eq(integration_id))
+        .all(db)
+        .await?;
+    Ok(rows.into_iter().map(GitRepositoryPublic::from).collect())
+}
+
 pub async fn link_repository(
     db: &DatabaseConnection,
     integration_id: Uuid,
@@ -891,13 +913,17 @@ pub async fn list_issue_prs(
         let Some(pr) = GitPullRequest::find_by_id(link.pr_id).one(db).await? else {
             continue;
         };
-        let provider_str = match GitRepository::find_by_id(pr.repository_id).one(db).await? {
-            Some(repo) => GitIntegration::find_by_id(repo.integration_id)
-                .one(db)
-                .await?
-                .map(|i| i.provider)
-                .unwrap_or_default(),
-            None => String::new(),
+        let provider_str = if let Some(repo_id) = pr.repository_id {
+            match GitRepository::find_by_id(repo_id).one(db).await? {
+                Some(repo) => GitIntegration::find_by_id(repo.integration_id)
+                    .one(db)
+                    .await?
+                    .map(|i| i.provider)
+                    .unwrap_or_default(),
+                None => String::new(),
+            }
+        } else {
+            String::new()
         };
         prs.push(GitPullRequestPublic::from_model_with_provider(pr, provider_str));
     }
