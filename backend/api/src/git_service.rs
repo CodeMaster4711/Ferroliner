@@ -526,19 +526,32 @@ pub async fn process_webhook_mr(
     let payload: serde_json::Value = serde_json::from_str(&job.payload)
         .map_err(|e| GitError::ProviderError(e.to_string()))?;
 
-    let (title, branch, pr_number, pr_url, state) = match job.provider.as_str() {
+    let (title, branch, pr_number, pr_url, state, pr_action) = match job.provider.as_str() {
         "gitlab" => {
             let attrs = &payload["object_attributes"];
             let title = attrs["title"].as_str().unwrap_or("").to_string();
             let branch = attrs["source_branch"].as_str().unwrap_or("").to_string();
             let number = attrs["iid"].as_i64().unwrap_or(0) as i32;
             let url = attrs["url"].as_str().unwrap_or("").to_string();
+            let action = attrs["action"].as_str().unwrap_or("").to_string();
+            let is_draft = attrs["draft"].as_bool().unwrap_or(false)
+                || attrs["work_in_progress"].as_bool().unwrap_or(false);
             let state = match attrs["state"].as_str().unwrap_or("") {
                 "merged" => "merged",
                 "closed" => "closed",
                 _ => "open",
             };
-            (title, branch, number, url, state.to_string())
+            let pr_action = if is_draft && (action == "open" || action == "update") {
+                "draft"
+            } else {
+                match action.as_str() {
+                    "close" => "closed",
+                    "merge" => "merged",
+                    "reopen" => "reopened",
+                    _ => state,
+                }
+            };
+            (title, branch, number, url, state.to_string(), pr_action.to_string())
         }
         "forgejo" => {
             let pr = &payload["pull_request"];
@@ -547,7 +560,9 @@ pub async fn process_webhook_mr(
             let number = pr["number"].as_i64().unwrap_or(0) as i32;
             let url = pr["html_url"].as_str().unwrap_or("").to_string();
             let merged = pr["merged"].as_bool().unwrap_or(false);
+            let is_draft = pr["draft"].as_bool().unwrap_or(false);
             let state_str = pr["state"].as_str().unwrap_or("open");
+            let action = payload["action"].as_str().unwrap_or("").to_string();
             let state = if merged {
                 "merged"
             } else if state_str == "closed" {
@@ -555,7 +570,19 @@ pub async fn process_webhook_mr(
             } else {
                 "open"
             };
-            (title, branch, number, url, state.to_string())
+            let pr_action = if merged {
+                "merged"
+            } else {
+                match action.as_str() {
+                    "closed" => "closed",
+                    "reopened" => "reopened",
+                    "converted_to_draft" => "draft",
+                    "ready_for_review" => "ready_for_review",
+                    _ if is_draft => "draft",
+                    _ => state,
+                }
+            };
+            (title, branch, number, url, state.to_string(), pr_action.to_string())
         }
         p => return Err(GitError::ProviderError(format!("unknown provider: {p}"))),
     };
@@ -661,9 +688,12 @@ pub async fn process_webhook_mr(
             write_activity(db, issue.id, "git.branch_linked", &branch).await?;
         }
 
-        let activity_kind = match state.as_str() {
+        let activity_kind = match pr_action.as_str() {
             "merged" => Some("git.pr_merged"),
             "closed" => Some("git.pr_closed"),
+            "reopened" => Some("git.pr_reopened"),
+            "draft" => Some("git.pr_draft"),
+            "ready_for_review" => Some("git.pr_ready"),
             "open" if is_new => Some("git.pr_opened"),
             _ => None,
         };
@@ -672,8 +702,13 @@ pub async fn process_webhook_mr(
             write_activity(db, issue.id, kind, &pr_meta).await?;
         }
 
-        if state == "merged" {
-            transition_issue_done(db, &issue, project.id).await?;
+        match pr_action.as_str() {
+            "merged" => transition_issue_to(db, &issue, project.id, "done").await?,
+            "closed" => transition_issue_to(db, &issue, project.id, "cancelled").await?,
+            "open" | "reopened" | "ready_for_review" | "draft" => {
+                transition_issue_to(db, &issue, project.id, "in_progress").await?
+            }
+            _ => {}
         }
     }
 
@@ -701,27 +736,28 @@ async fn write_activity(
     Ok(())
 }
 
-async fn transition_issue_done(
+async fn transition_issue_to(
     db: &DatabaseConnection,
     issue: &issue::Model,
     project_id: Uuid,
+    status_type: &str,
 ) -> GitResult<()> {
-    let done_status = IssueStatus::find()
+    let target_status = IssueStatus::find()
         .filter(issue_status::Column::ProjectId.eq(project_id))
-        .filter(issue_status::Column::StatusType.eq("done"))
+        .filter(issue_status::Column::StatusType.eq(status_type))
         .one(db)
         .await?;
 
-    let Some(done_status) = done_status else {
+    let Some(target_status) = target_status else {
         return Ok(());
     };
 
-    if issue.status_id == done_status.id {
+    if issue.status_id == target_status.id {
         return Ok(());
     }
 
     let mut active: issue::ActiveModel = issue.clone().into();
-    active.status_id = Set(done_status.id);
+    active.status_id = Set(target_status.id);
     active.updated_at = Set(chrono::Utc::now().naive_utc());
     active.update(db).await?;
 
